@@ -1,0 +1,9 @@
+node_modules/
+.env
+var/
+*.log
+.DS_Store
+coverage/
+android/
+*.keystore
+*.jks
