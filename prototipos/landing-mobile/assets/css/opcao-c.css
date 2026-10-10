@@ -176,7 +176,7 @@ body { background: var(--fundo); color: var(--texto); font-family: "Geist", syst
 
 /* ---------- Rodapé ---------- */
 .rodape { padding: 40px var(--gutter) 24px; display: grid; gap: 14px; justify-items: center; text-align: center; color: var(--texto-2); font-size: 13px; }
-.rodape img { width: 64px; }
+.rodape img { width: 48px; height: auto; }
 .rodape__links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 18px; }
 .rodape__links a { display: inline-block; padding: 6px 0; font-size: 14px; color: var(--texto); }
 

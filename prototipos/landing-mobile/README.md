@@ -33,7 +33,7 @@ assets/
   js/opcao-c.js       simulação do agendamento da opção C
   fonts/              Archivo, Big Shoulders Display, Geist, Geist Mono (woff2, servidas localmente)
   icons/              Phosphor Icons (woff2)
-  logo/               braço em vetor (P&B), selo, ícone do app, favicon
+  logo/               braço em vetor (P&B), ícone do app, favicon
   img/                fotos do Fortão tratadas em preto e branco
 previas/              imagens e versões de arquivo único
 ```

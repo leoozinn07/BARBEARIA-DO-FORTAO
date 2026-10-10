@@ -276,7 +276,7 @@ body {
 /* ---------- Rodapé ---------- */
 .rodape { padding: 48px var(--gutter) calc(110px + env(safe-area-inset-bottom)); border-top: 1px solid var(--linha); display: grid; gap: 28px; background: var(--fundo-2); }
 .rodape__marca { display: flex; align-items: center; gap: 16px; }
-.rodape__marca img { width: 84px; }
+.rodape__marca img { width: 56px; height: auto; }
 .rodape__marca p { font-weight: 700; font-stretch: 110%; font-size: 17px; max-width: 18ch; line-height: 1.25; }
 .rodape__links ul { display: grid; gap: 4px; }
 .rodape__links a { display: inline-block; padding: 6px 0; color: var(--texto-2); transition: color 200ms ease; }

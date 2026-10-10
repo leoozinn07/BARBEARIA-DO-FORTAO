@@ -227,7 +227,7 @@ body {
 
 /* ---------- Rodapé ---------- */
 .rodape { padding: 48px var(--gutter) calc(110px + env(safe-area-inset-bottom)); border-top: 1px dashed #3a3a3f; display: grid; gap: 22px; justify-items: start; }
-.rodape__selo { width: 104px; transform: rotate(-8deg); }
+.rodape__logo { width: 64px; height: auto; }
 .rodape__frase { font-family: "Big Shoulders Display", sans-serif; font-weight: 800; font-size: 30px; line-height: 1; text-transform: uppercase; }
 .rodape__links { display: grid; gap: 2px; }
 .rodape__links a { display: inline-block; padding: 6px 0; color: var(--texto-2); }
