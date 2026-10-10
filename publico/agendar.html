@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-BR" class="no-js" data-tema="escuro">
+<head>
+  <!-- incluir:cabeca -->
+  <title>Marcar horário | Barbearia do Fortão</title>
+  <meta name="description" content="Escolha o serviço, o dia e o horário na Barbearia do Fortão. Confirmação na hora e lembrete antes do corte.">
+  <link rel="stylesheet" href="/css/agenda.css">
+  <link rel="stylesheet" href="/css/paginas.css">
+  <script type="module" src="/js/agendar.js"></script>
+</head>
+<body>
+  <!-- incluir:topo -->
+  <main id="conteudo" class="container pagina">
+    <header class="pagina__cabeca">
+      <h1 class="titulo-pagina">Marcar horário</h1>
+      <p class="subtitulo" data-agendar-sub>Três toques: serviço, dia e horário. Você vê o valor antes de confirmar.</p>
+    </header>
+    <div class="alerta" data-agendar-aviso hidden></div>
+    <div data-agendamento></div>
+  </main>
+  <!-- incluir:rodape -->
+  <!-- incluir:abas -->
+
+  <dialog class="folha" data-folha-sucesso aria-labelledby="sucesso-titulo">
+    <div class="folha__alca" aria-hidden="true"></div>
+    <div class="folha__corpo">
+      <div class="sucesso__icone"><i class="ph-fill ph-check-circle" aria-hidden="true"></i></div>
+      <h2 class="titulo" id="sucesso-titulo">Fechou! Horário marcado.</h2>
+      <p class="subtitulo" data-sucesso-texto></p>
+      <p class="subtitulo">A confirmação chegou no seu e-mail. Vamos te lembrar antes.</p>
+      <button class="botao botao--linha botao--bloco" type="button" data-sucesso-push hidden><i class="ph ph-bell-ringing" aria-hidden="true"></i> Receber lembrete no celular</button>
+      <a class="botao botao--cheio botao--bloco" href="/conta#horarios">Ver meus horários</a>
+    </div>
+  </dialog>
+</body>
+</html>

@@ -59,3 +59,13 @@ describe('LGPD', () => {
     assert.deepEqual(linhas.map((l) => l.aceito), [0, 1]);
   });
 });
+
+describe('notificações push', () => {
+  it('aceita serviço de push oficial e recusa endereço interno (SSRF)', async () => {
+    const c = await novoCliente();
+    const chaves = { p256dh: 'BOr2a-chave-publica-de-teste', auth: 'segredo-auth' };
+    assert.equal((await c.post('/api/push', { endpoint: 'https://fcm.googleapis.com/fcm/send/abc123', keys: chaves })).status, 201);
+    assert.equal((await c.post('/api/push', { endpoint: 'https://169.254.169.254/latest/meta-data', keys: chaves })).status, 422);
+    assert.equal((await c.post('/api/push', { endpoint: 'https://localhost:3306/', keys: chaves })).status, 422);
+  });
+});

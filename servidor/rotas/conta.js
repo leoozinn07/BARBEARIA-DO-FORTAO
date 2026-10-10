@@ -141,7 +141,10 @@ rotasConta.post('/conta/excluir', limites.senha, validar(z.object({ senha: campo
 // ------------------------------------------------------------------ agendamentos do cliente
 rotasConta.get('/conta/agendamentos', rota(async (req, res) => {
   const { agenda } = await lerConfiguracoes();
-  const linhas = await consulta('SELECT * FROM agendamentos WHERE cliente_id = ? ORDER BY inicio DESC LIMIT 100', [req.usuario.id]);
+  const linhas = await consulta(
+    'SELECT a.*, s.slug AS servico_slug FROM agendamentos a JOIN servicos s ON s.id = a.servico_id WHERE a.cliente_id = ? ORDER BY a.inicio DESC LIMIT 100',
+    [req.usuario.id],
+  );
   const agora = Date.now();
   const todos = linhas.map((a) => paraCliente(a, agenda));
   res.set('Cache-Control', 'no-store').json({
@@ -194,8 +197,11 @@ rotasConta.post('/notificacoes/lidas', validar(z.object({ ids: z.array(z.number(
 }));
 
 // ------------------------------------------------------------------ push
+// Só serviços de push conhecidos: impede que alguém cadastre um endereço interno e use o servidor para chamá-lo (SSRF)
+const HOSTS_PUSH = /^(fcm\.googleapis\.com|android\.googleapis\.com|updates\.push\.services\.mozilla\.com|[a-z0-9.-]+\.push\.apple\.com|web\.push\.apple\.com|[a-z0-9.-]+\.notify\.windows\.com)$/i;
+
 const esquemaPush = z.object({
-  endpoint: z.url({ protocol: /^https$/, error: 'Inscrição inválida.' }).max(700),
+  endpoint: z.url({ protocol: /^https$/, hostname: HOSTS_PUSH, error: 'Serviço de notificação não reconhecido.' }).max(700),
   keys: z.object({ p256dh: z.string().min(10).max(255), auth: z.string().min(4).max(255) }),
 });
 

@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="pt-BR" class="no-js" data-tema="escuro">
+<head>
+  <!-- incluir:cabeca -->
+  <title>Painel do Fortão | Barbearia do Fortão</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="/css/agenda.css">
+  <link rel="stylesheet" href="/css/paginas.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <script type="module" src="/js/admin.js"></script>
+</head>
+<body>
+  <!-- incluir:topo -->
+  <main id="conteudo" class="container painel-admin">
+    <header class="pagina__cabeca admin-cabeca">
+      <div>
+        <h1 class="titulo-pagina">Painel do Fortão</h1>
+        <p class="subtitulo" data-hoje></p>
+      </div>
+      <button class="botao botao--cheio" type="button" data-novo-abrir><i class="ph-bold ph-plus" aria-hidden="true"></i> Novo horário</button>
+    </header>
+
+    <section class="resumo" aria-label="Resumo" data-resumo>
+      <div class="esqueleto resumo__esq"></div><div class="esqueleto resumo__esq"></div><div class="esqueleto resumo__esq"></div>
+    </section>
+
+    <nav class="segmentos" aria-label="Seções do painel">
+      <a href="#agenda" data-segmento="agenda">Agenda</a>
+      <a href="#bloqueios" data-segmento="bloqueios">Folgas</a>
+      <a href="#servicos" data-segmento="servicos">Serviços</a>
+      <a href="#funcionamento" data-segmento="funcionamento">Horários</a>
+      <a href="#barbearia" data-segmento="barbearia">Barbearia</a>
+      <a href="#clientes" data-segmento="clientes">Clientes</a>
+    </nav>
+
+    <!-- AGENDA -->
+    <section class="painel" data-painel="agenda" aria-labelledby="agenda-titulo">
+      <div class="dia-nav">
+        <button class="icone-botao" type="button" data-dia-anterior aria-label="Dia anterior"><i class="ph ph-caret-left" aria-hidden="true"></i></button>
+        <label class="dia-nav__data"><span class="sr-only">Escolher dia</span><input type="date" data-dia></label>
+        <button class="icone-botao" type="button" data-dia-proximo aria-label="Próximo dia"><i class="ph ph-caret-right" aria-hidden="true"></i></button>
+        <button class="botao botao--suave botao--p" type="button" data-dia-hoje>Hoje</button>
+      </div>
+      <h2 class="titulo" id="agenda-titulo" data-agenda-titulo>Agenda de hoje</h2>
+      <ol class="linha-tempo" data-agenda aria-labelledby="agenda-titulo"></ol>
+    </section>
+
+    <!-- FOLGAS / BLOQUEIOS -->
+    <section class="painel" data-painel="bloqueios" aria-labelledby="bloq-titulo" hidden>
+      <form class="grupo-form" data-form-bloqueio novalidate>
+        <h2 id="bloq-titulo">Fechar a agenda</h2>
+        <p class="subtitulo">Folga, corrida, compromisso: ninguém consegue marcar nesse período.</p>
+        <p class="alerta alerta--erro" data-erro-geral role="alert" tabindex="-1" hidden></p>
+        <div class="campo"><label for="b-data">Dia</label><input id="b-data" name="data" type="date" required><p class="erro-campo" data-erro-de="data"></p></div>
+        <label class="marcar"><input type="checkbox" name="dia_inteiro" data-dia-inteiro><span>Dia inteiro</span></label>
+        <div class="duas-colunas" data-faixa-bloqueio>
+          <div class="campo"><label for="b-de">De</label><input id="b-de" name="de" type="time" step="900" value="12:00"></div>
+          <div class="campo"><label for="b-ate">Até</label><input id="b-ate" name="ate" type="time" step="900" value="14:00"><p class="erro-campo" data-erro-de="ate"></p></div>
+        </div>
+        <div class="campo"><label for="b-motivo">Motivo (só você vê)</label><input id="b-motivo" name="motivo" type="text" maxlength="160" placeholder="Ex.: corrida de domingo"></div>
+        <button class="botao botao--cheio" type="submit">Fechar período</button>
+      </form>
+      <h2 class="titulo">Próximas folgas</h2>
+      <ul class="lista-admin" data-bloqueios></ul>
+    </section>
+
+    <!-- SERVIÇOS -->
+    <section class="painel" data-painel="servicos" aria-labelledby="serv-titulo" hidden>
+      <h2 class="titulo" id="serv-titulo">Serviços e preços</h2>
+      <div class="pilha" data-servicos></div>
+      <form class="grupo-form" data-form-novo-servico novalidate>
+        <h2>Novo serviço</h2>
+        <p class="alerta alerta--erro" data-erro-geral role="alert" tabindex="-1" hidden></p>
+        <div class="campo"><label for="ns-nome">Nome</label><input id="ns-nome" name="nome" required maxlength="80"><p class="erro-campo" data-erro-de="nome"></p></div>
+        <div class="duas-colunas">
+          <div class="campo"><label for="ns-preco">Preço (R$)</label><input id="ns-preco" name="preco" type="number" min="0" step="1" inputmode="numeric" required></div>
+          <div class="campo"><label for="ns-duracao">Duração (min)</label><input id="ns-duracao" name="duracao" type="number" min="10" step="5" inputmode="numeric" required></div>
+        </div>
+        <div class="campo"><label for="ns-desc">Descrição</label><input id="ns-desc" name="descricao" maxlength="255"></div>
+        <button class="botao botao--suave" type="submit">Adicionar serviço</button>
+      </form>
+    </section>
+
+    <!-- FUNCIONAMENTO -->
+    <section class="painel" data-painel="funcionamento" aria-labelledby="func-titulo" hidden>
+      <form class="grupo-form" data-form-funcionamento novalidate>
+        <h2 id="func-titulo">Horário de funcionamento</h2>
+        <p class="subtitulo">Marque os dias abertos. Use a pausa para o almoço, se quiser.</p>
+        <p class="alerta alerta--erro" data-erro-geral role="alert" tabindex="-1" hidden></p>
+        <div class="semana" data-semana></div>
+        <button class="botao botao--cheio" type="submit">Salvar horários</button>
+      </form>
+    </section>
+
+    <!-- BARBEARIA -->
+    <section class="painel" data-painel="barbearia" aria-labelledby="barb-titulo" hidden>
+      <form class="grupo-form" data-form-barbearia novalidate>
+        <h2 id="barb-titulo">Dados da barbearia</h2>
+        <p class="alerta alerta--erro" data-erro-geral role="alert" tabindex="-1" hidden></p>
+        <div class="campo"><label for="c-endereco">Endereço (rua e número)</label><input id="c-endereco" name="negocio.endereco" maxlength="160"><p class="erro-campo" data-erro-de="negocio.endereco"></p></div>
+        <div class="duas-colunas">
+          <div class="campo"><label for="c-bairro">Bairro</label><input id="c-bairro" name="negocio.bairro" maxlength="80"></div>
+          <div class="campo"><label for="c-cidade">Cidade</label><input id="c-cidade" name="negocio.cidade" maxlength="80"></div>
+        </div>
+        <div class="duas-colunas">
+          <div class="campo"><label for="c-whatsapp">WhatsApp</label><input id="c-whatsapp" name="negocio.whatsapp" type="tel" inputmode="tel"><p class="erro-campo" data-erro-de="negocio.whatsapp"></p></div>
+          <div class="campo"><label for="c-instagram">Instagram</label><input id="c-instagram" name="negocio.instagram" placeholder="@barbearia"></div>
+        </div>
+        <div class="campo"><label for="c-email">E-mail de contato</label><input id="c-email" name="negocio.email_contato" type="email"><p class="erro-campo" data-erro-de="negocio.email_contato"></p></div>
+        <div class="duas-colunas">
+          <div class="campo"><label for="c-razao">Razão social</label><input id="c-razao" name="negocio.razao_social" maxlength="160"></div>
+          <div class="campo"><label for="c-cnpj">CNPJ</label><input id="c-cnpj" name="negocio.cnpj" maxlength="20"></div>
+        </div>
+        <div class="campo"><label for="c-encarregado">E-mail do encarregado de dados (LGPD)</label><input id="c-encarregado" name="negocio.encarregado_email" type="email"><p class="erro-campo" data-erro-de="negocio.encarregado_email"></p></div>
+        <h2>Regras da agenda</h2>
+        <div class="duas-colunas">
+          <div class="campo"><label for="r-antecedencia">Antecedência mínima (min)</label><input id="r-antecedencia" name="agenda.antecedencia_min" type="number" min="0" max="1440"></div>
+          <div class="campo"><label for="r-janela">Agenda aberta (dias)</label><input id="r-janela" name="agenda.janela_dias" type="number" min="1" max="120"></div>
+        </div>
+        <div class="duas-colunas">
+          <div class="campo"><label for="r-passo">Intervalo entre horários (min)</label><input id="r-passo" name="agenda.passo_min" type="number" min="5" max="120"></div>
+          <div class="campo"><label for="r-cancelar">Cliente cancela até (horas antes)</label><input id="r-cancelar" name="agenda.cancelar_ate_horas" type="number" min="0" max="72"></div>
+        </div>
+        <div class="campo"><label for="r-max">Máximo de horários futuros por cliente</label><input id="r-max" name="agenda.max_futuros_por_cliente" type="number" min="1" max="20"></div>
+        <button class="botao botao--cheio" type="submit">Salvar dados</button>
+      </form>
+    </section>
+
+    <!-- CLIENTES -->
+    <section class="painel" data-painel="clientes" aria-labelledby="cli-titulo" hidden>
+      <h2 class="titulo" id="cli-titulo">Clientes</h2>
+      <div class="campo"><label for="busca">Buscar por nome, e-mail ou telefone</label><input id="busca" type="search" data-busca autocomplete="off"></div>
+      <ul class="lista-admin" data-clientes></ul>
+    </section>
+  </main>
+  <!-- incluir:rodape -->
+  <!-- incluir:abas -->
+
+  <!-- Novo horário -->
+  <dialog class="folha" data-folha-novo aria-labelledby="novo-titulo">
+    <div class="folha__alca" aria-hidden="true"></div>
+    <form class="folha__corpo" data-form-novo novalidate>
+      <div class="folha__topo"><h2 id="novo-titulo">Novo horário</h2><button class="icone-botao" type="button" data-fechar aria-label="Fechar"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+      <p class="alerta alerta--erro" data-erro-geral role="alert" tabindex="-1" hidden></p>
+      <fieldset class="opcoes-tema opcoes-tema--2">
+        <legend class="rotulo">Cliente</legend>
+        <label><input type="radio" name="tipo" value="avulso" checked><span><i class="ph ph-user" aria-hidden="true"></i>Sem conta</span></label>
+        <label><input type="radio" name="tipo" value="conta"><span><i class="ph ph-user-circle-check" aria-hidden="true"></i>Tem conta</span></label>
+      </fieldset>
+      <div data-campos-avulso class="pilha">
+        <div class="campo"><label for="n-nome">Nome</label><input id="n-nome" name="nome" maxlength="120"><p class="erro-campo" data-erro-de="nome"></p></div>
+        <div class="campo"><label for="n-tel">WhatsApp</label><input id="n-tel" name="telefone" type="tel" inputmode="tel"><p class="erro-campo" data-erro-de="telefone"></p></div>
+      </div>
+      <div class="campo" data-campos-conta hidden><label for="n-email">E-mail da conta</label><input id="n-email" name="email_cliente" type="email"><p class="erro-campo" data-erro-de="email_cliente"></p></div>
+      <div class="campo"><label for="n-servico">Serviço</label><select id="n-servico" name="servico" data-novo-servico></select></div>
+      <div class="campo"><label for="n-dia">Dia</label><input id="n-dia" name="dia" type="date" data-novo-dia></div>
+      <fieldset class="campo"><legend class="rotulo-campo">Horário</legend><div class="ag-periodo__lista" data-novo-horarios></div><p class="erro-campo" data-erro-de="inicio"></p></fieldset>
+      <div class="campo"><label for="n-obs">Observação (opcional)</label><input id="n-obs" name="observacao" maxlength="255"></div>
+      <button class="botao botao--cheio botao--bloco" type="submit">Marcar horário</button>
+    </form>
+  </dialog>
+
+  <!-- Cancelar pelo admin -->
+  <dialog class="folha" data-folha-cancelar aria-labelledby="canc-titulo">
+    <div class="folha__alca" aria-hidden="true"></div>
+    <form class="folha__corpo" data-form-cancelar novalidate>
+      <h2 class="titulo" id="canc-titulo">Cancelar horário</h2>
+      <p class="subtitulo" data-cancelar-texto></p>
+      <div class="campo"><label for="motivo">Motivo (o cliente recebe por e-mail)</label><input id="motivo" name="motivo" maxlength="255" placeholder="Ex.: imprevisto, vamos remarcar"></div>
+      <p class="alerta alerta--erro" data-erro-geral role="alert" tabindex="-1" hidden></p>
+      <button class="botao botao--perigo botao--bloco" type="submit">Cancelar e avisar o cliente</button>
+      <button class="botao botao--suave botao--bloco" type="button" data-fechar>Voltar</button>
+    </form>
+  </dialog>
+
+  <!-- Remarcar pelo admin -->
+  <dialog class="folha" data-folha-remarcar aria-labelledby="rem-titulo">
+    <div class="folha__alca" aria-hidden="true"></div>
+    <form class="folha__corpo" data-form-remarcar novalidate>
+      <div class="folha__topo"><h2 id="rem-titulo">Remarcar</h2><button class="icone-botao" type="button" data-fechar aria-label="Fechar"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+      <p class="subtitulo" data-remarcar-texto></p>
+      <div class="campo"><label for="r-dia">Novo dia</label><input id="r-dia" name="dia" type="date" data-remarcar-dia></div>
+      <fieldset class="campo"><legend class="rotulo-campo">Horário</legend><div class="ag-periodo__lista" data-remarcar-horarios></div></fieldset>
+      <p class="alerta alerta--erro" data-erro-geral role="alert" tabindex="-1" hidden></p>
+      <button class="botao botao--cheio botao--bloco" type="submit">Confirmar novo horário</button>
+    </form>
+  </dialog>
+</body>
+</html>

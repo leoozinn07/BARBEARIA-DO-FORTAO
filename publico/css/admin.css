@@ -1,0 +1,60 @@
+/* Painel do Fortão: denso o suficiente para o dia a dia, com toque grande no celular. */
+.painel-admin { padding-top: 12px; display: grid; gap: 20px; }
+.admin-cabeca { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+
+/* ---------- resumo ---------- */
+.resumo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.resumo__item { display: grid; gap: 4px; padding: 16px; border-radius: 20px; background: var(--sup); border: 1px solid var(--borda); }
+.resumo__item:first-child { background: var(--ativo-bg); color: var(--ativo-fg); border-color: transparent; }
+.resumo__item:first-child small { color: inherit; opacity: 0.7; }
+.resumo__item small { font-size: 0.8125rem; color: var(--texto-2); font-weight: 500; }
+.resumo__item b { font-size: 1.625rem; font-weight: 700; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.resumo__item span { font-size: 0.8125rem; opacity: 0.8; }
+.resumo__esq { height: 104px; border-radius: 20px; }
+
+/* ---------- navegação de dias ---------- */
+.dia-nav { display: flex; align-items: center; gap: 8px; }
+.dia-nav__data { flex: 1; }
+.dia-nav input { width: 100%; min-height: 44px; padding: 0 12px; border-radius: 999px; background: var(--sup); border: 1px solid var(--borda-forte); color: var(--texto); font-size: 0.9375rem; color-scheme: inherit; }
+
+/* ---------- linha do tempo ---------- */
+.linha-tempo { display: grid; gap: 10px; }
+.item-agenda { display: grid; grid-template-columns: 64px 1fr; gap: 12px; padding: 14px; border-radius: 20px; background: var(--sup); border: 1px solid var(--borda); }
+.item-agenda[data-status="cancelado"] { opacity: 0.55; }
+.item-agenda__hora { display: grid; align-content: start; gap: 2px; }
+.item-agenda__hora b { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.item-agenda__hora small { font-size: 0.75rem; color: var(--texto-2); font-variant-numeric: tabular-nums; }
+.item-agenda__corpo { display: grid; gap: 6px; min-width: 0; }
+.item-agenda__nome { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-weight: 650; font-size: 1.0625rem; }
+.item-agenda__detalhe { color: var(--texto-2); font-size: 0.875rem; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.item-agenda__detalhe a { color: var(--texto); }
+.item-agenda__acoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.item-agenda__acoes .botao { min-height: 38px; padding: 0 12px; font-size: 0.8125rem; }
+.item-bloqueio { grid-template-columns: 64px 1fr auto; align-items: center; background: repeating-linear-gradient(135deg, var(--sup) 0 10px, var(--sup-2) 10px 20px); }
+
+/* ---------- formulários e listas ---------- */
+.duas-colunas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lista-admin { display: grid; gap: 8px; }
+.lista-admin li { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 14px 16px; border-radius: 18px; background: var(--sup); border: 1px solid var(--borda); }
+.lista-admin small { color: var(--texto-2); font-size: 0.8125rem; display: block; }
+.servico-admin { display: grid; gap: 12px; padding: 16px; border-radius: 20px; background: var(--sup); border: 1px solid var(--borda); }
+.servico-admin .duas-colunas { grid-template-columns: 1fr 1fr; }
+.servico-admin__rodape { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.semana { display: grid; gap: 10px; }
+.dia-semana { display: grid; gap: 10px; padding: 14px; border-radius: 18px; background: var(--sup-2); }
+.dia-semana__topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.dia-semana__topo b { font-size: 1rem; }
+.dia-semana__faixas { display: grid; gap: 8px; }
+.faixa { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
+.faixa input { min-height: 44px; padding: 0 10px; border-radius: 12px; background: var(--sup); border: 1px solid var(--borda-forte); color: var(--texto); color-scheme: inherit; }
+.faixa span { color: var(--texto-2); font-size: 0.875rem; }
+.dia-semana[data-fechado="true"] .dia-semana__faixas, .dia-semana[data-fechado="true"] [data-pausa] { display: none; }
+.opcoes-tema--2 { grid-template-columns: 1fr 1fr; }
+.campo input[type="date"], .campo input[type="time"] { color-scheme: inherit; }
+:root[data-tema="claro"] .dia-nav input, :root[data-tema="claro"] .faixa input { color-scheme: light; }
+
+@media (min-width: 900px) {
+  .painel-admin { max-width: 980px; }
+  .resumo { grid-template-columns: repeat(4, 1fr); }
+  .semana { grid-template-columns: 1fr 1fr; }
+}

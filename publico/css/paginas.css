@@ -1,0 +1,73 @@
+/* Páginas internas: marcar horário, contas, minha conta, páginas legais. */
+.pagina { padding-top: 12px; display: grid; gap: 22px; }
+.pagina__cabeca { display: grid; gap: 8px; }
+
+/* ---------------------------------------------------------------- entrar / criar conta */
+.auth { min-height: calc(100dvh - var(--topo-h)); display: grid; align-content: start; gap: 24px; padding-top: 12px; }
+.auth__foto { display: none; }
+.auth__caixa { display: grid; gap: 20px; width: 100%; max-width: 440px; }
+.auth__caixa form { display: grid; gap: 16px; }
+.auth__troca { color: var(--texto-2); }
+.auth__marca { width: 56px; }
+.forca { display: flex; gap: 4px; }
+.forca span { flex: 1; height: 4px; border-radius: 4px; background: var(--sup-3); transition: background-color 200ms ease; }
+.forca[data-nivel="1"] span:nth-child(-n+1), .forca[data-nivel="2"] span:nth-child(-n+2), .forca[data-nivel="3"] span:nth-child(-n+3), .forca[data-nivel="4"] span { background: var(--texto); }
+.resultado { display: grid; gap: 14px; justify-items: start; }
+
+@media (min-width: 900px) {
+  .auth { grid-template-columns: 1fr 1fr; align-items: center; gap: 56px; max-width: var(--largura); margin: 0 auto; padding: 24px var(--gutter); }
+  .auth__foto { display: grid; position: relative; height: min(78dvh, 720px); border-radius: var(--raio); overflow: hidden; align-items: end; }
+  .auth__foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; }
+  .auth__foto::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 50%, rgb(11 11 12 / 0.9)); }
+  .auth__foto p { position: relative; z-index: 1; padding: 28px; font-size: 2rem; font-weight: 700; letter-spacing: -0.04em; line-height: 1.05; color: #f2f2f3; }
+}
+
+/* ---------------------------------------------------------------- minha conta */
+.segmentos { position: sticky; top: calc(var(--topo-h) + env(safe-area-inset-top)); z-index: 30; display: flex; gap: 4px; padding: 4px; margin: 0 calc(var(--gutter) * -1); padding-inline: var(--gutter); background: var(--fundo); overflow-x: auto; scrollbar-width: none; }
+.segmentos a { flex: 1 0 auto; text-align: center; padding: 10px 14px; border-radius: 999px; font-size: 0.875rem; font-weight: 600; color: var(--texto-2); text-decoration: none; background: var(--sup); transition: background-color 200ms ease, color 200ms ease; }
+.segmentos a[aria-current="true"] { background: var(--ativo-bg); color: var(--ativo-fg); }
+.painel { display: grid; gap: 18px; }
+.painel[hidden] { display: none; }
+.horario { display: grid; gap: 14px; padding: 18px; border-radius: var(--raio); background: var(--sup); border: 1px solid var(--borda); }
+.horario__topo { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+.horario__data { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.035em; line-height: 1.1; }
+.horario__data small { display: block; font-size: 0.9375rem; font-weight: 500; letter-spacing: 0; color: var(--texto-2); margin-top: 4px; }
+.horario__info { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--texto-2); font-size: 0.875rem; }
+.horario__info span { display: inline-flex; align-items: center; gap: 6px; }
+.horario__acoes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.horario__acoes .botao { min-height: 46px; }
+.horario__nota { font-size: 0.8125rem; color: var(--texto-2); }
+.historico { display: grid; }
+.historico li { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 14px 0; border-top: 1px solid var(--borda); font-size: 0.9375rem; }
+.historico li:last-child { border-bottom: 1px solid var(--borda); }
+.historico small { color: var(--texto-2); grid-column: 1; }
+.historico .selo { grid-row: 1 / span 2; grid-column: 2; align-self: center; }
+.grupo-form { display: grid; gap: 16px; padding: 20px; border-radius: var(--raio); background: var(--sup); border: 1px solid var(--borda); }
+.grupo-form h2 { font-size: 1.125rem; font-weight: 650; letter-spacing: -0.02em; }
+.opcoes-tema { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.opcoes-tema label { position: relative; cursor: pointer; }
+.opcoes-tema input { position: absolute; opacity: 0; }
+.opcoes-tema span { display: grid; place-items: center; gap: 4px; padding: 12px 6px; border-radius: var(--raio-campo); background: var(--sup-2); font-size: 0.8125rem; font-weight: 600; transition: background-color 200ms ease, color 200ms ease; }
+.opcoes-tema i { font-size: 1.25rem; }
+.opcoes-tema input:checked + span { background: var(--ativo-bg); color: var(--ativo-fg); }
+.opcoes-tema input:focus-visible + span { outline: 2px solid var(--foco); outline-offset: 2px; }
+.linha-acao { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.linha-acao p { color: var(--texto-2); font-size: 0.875rem; }
+
+/* ---------------------------------------------------------------- textos legais */
+.legal { max-width: 70ch; display: grid; gap: 14px; padding-top: 12px; }
+.legal h1 { margin-bottom: 4px; }
+.legal h2 { font-size: 1.25rem; font-weight: 650; letter-spacing: -0.02em; margin-top: 18px; }
+.legal p, .legal li { color: var(--texto-2); }
+.legal ul { list-style: disc; padding-left: 1.25rem; display: grid; gap: 6px; }
+.legal strong { color: var(--texto); font-weight: 600; }
+.legal .atualizado { font-size: 0.875rem; }
+.legal table { border-collapse: collapse; width: 100%; font-size: 0.875rem; }
+.legal th, .legal td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--borda); vertical-align: top; }
+.legal th { color: var(--texto); font-weight: 600; }
+.legal td { color: var(--texto-2); }
+
+@media (min-width: 900px) {
+  .pagina { max-width: 760px; }
+  .horario__acoes { grid-template-columns: repeat(4, auto); justify-content: start; }
+}

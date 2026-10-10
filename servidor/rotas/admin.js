@@ -18,7 +18,7 @@ rotasAdmin.use(exigirAdmin);
 
 const registrar = (req, acao, alvo, detalhes) => auditar({ usuarioId: req.usuario.id, acao, alvo, detalhes, ip: req.ip });
 
-const SELECT_AGENDA = 'SELECT a.*, u.email AS cliente_email FROM agendamentos a LEFT JOIN usuarios u ON u.id = a.cliente_id';
+const SELECT_AGENDA = 'SELECT a.*, u.email AS cliente_email, s.slug AS servico_slug FROM agendamentos a LEFT JOIN usuarios u ON u.id = a.cliente_id JOIN servicos s ON s.id = a.servico_id';
 
 // ------------------------------------------------------------------ agenda e resumo
 rotasAdmin.get('/agenda', validar(z.object({ de: campos.dataISO, ate: campos.dataISO.optional() }), 'query'), rota(async (req, res) => {

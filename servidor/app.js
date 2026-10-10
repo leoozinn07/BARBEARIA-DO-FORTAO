@@ -13,6 +13,7 @@ import { rotasAdmin } from './rotas/admin.js';
 import { rotasAuth } from './rotas/auth.js';
 import { rotasConta } from './rotas/conta.js';
 import { rotasPublicas } from './rotas/publico.js';
+import { servirPaginas } from './paginas.js';
 
 const PUBLICO = path.join(RAIZ, 'publico');
 
@@ -39,8 +40,9 @@ export function criarApp() {
   app.get(['/conta', '/conta.html'], ...exigirPagina());
   app.get(['/admin', '/admin.html'], ...exigirPagina('admin'));
 
+  app.use(servirPaginas);
   app.use(express.static(PUBLICO, {
-    extensions: ['html'],
+    index: false,
     setHeaders(res, arquivo) {
       if (arquivo.endsWith('.html') || arquivo.endsWith('sw.js') || arquivo.endsWith('.webmanifest')) {
         res.setHeader('Cache-Control', 'no-cache');

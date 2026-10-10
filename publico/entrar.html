@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR" class="no-js" data-tema="escuro">
+<head>
+  <!-- incluir:cabeca -->
+  <title>Entrar | Barbearia do Fortão</title>
+  <meta name="description" content="Entre na sua conta da Barbearia do Fortão para marcar e acompanhar seus horários.">
+  <meta name="robots" content="index, follow">
+  <link rel="stylesheet" href="/css/paginas.css">
+  <script type="module" src="/js/auth.js"></script>
+</head>
+<body>
+  <!-- incluir:topo -->
+  <main id="conteudo" class="auth container">
+    <aside class="auth__foto" aria-hidden="true"><img src="/img/fortao-corrida.jpg" alt="" width="598" height="820"><p>Constância vence talento.</p></aside>
+    <section class="auth__caixa" aria-labelledby="titulo">
+      <h1 class="titulo-pagina" id="titulo">Entrar</h1>
+      <p class="subtitulo">Bom te ver de novo. Seus horários estão a um toque.</p>
+      <form data-form="entrar" novalidate>
+        <p class="alerta alerta--erro" data-erro-geral role="alert" tabindex="-1" hidden></p>
+        <div class="campo">
+          <label for="email">E-mail</label>
+          <input id="email" name="email" type="email" autocomplete="email" aria-describedby="email-erro" inputmode="email" required>
+          <p class="erro-campo" id="email-erro" data-erro-de="email"></p>
+        </div>
+        <div class="campo">
+          <label for="senha">Senha</label>
+          <div class="senha-caixa">
+            <input id="senha" name="senha" type="password" autocomplete="current-password" required aria-describedby="senha-erro" >
+            <button type="button" data-ver-senha aria-label="Mostrar senha" aria-pressed="false"><i class="ph ph-eye" aria-hidden="true"></i></button>
+          </div>
+          <p class="erro-campo" id="senha-erro" data-erro-de="senha"></p>
+        </div>
+        <a class="link" href="/recuperar-senha">Esqueci a senha</a>
+        <button class="botao botao--cheio botao--bloco botao--g" type="submit">Entrar</button>
+      </form>
+      <p class="auth__troca">Primeira vez aqui? <a class="link" href="/cadastro" data-manter-volta>Criar conta</a></p>
+    </section>
+  </main>
+  <!-- incluir:rodape -->
+  <!-- incluir:abas -->
+</body>
+</html>

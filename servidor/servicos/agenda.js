@@ -292,6 +292,7 @@ export function paraCliente(ag, regras) {
   return {
     codigo: ag.codigo,
     servico: ag.servico_nome,
+    servico_slug: ag.servico_slug ?? null,
     preco_centavos: ag.preco_centavos,
     duracao_min: ag.duracao_min,
     inicio: inicio.toISOString(),

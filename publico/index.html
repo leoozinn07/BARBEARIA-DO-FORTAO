@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="pt-BR" class="no-js" data-tema="escuro">
+<head>
+  <!-- incluir:cabeca -->
+  <title>Barbearia do Fortão | Corte com hora marcada na Cohab 5, São Paulo</title>
+  <meta name="description" content="Marque seu corte na Barbearia do Fortão, na Cohab 5 em São Paulo. Corte Fortão R$ 40, corte e sobrancelha R$ 45, corte e barba R$ 50. Sem fila, com lembrete no celular.">
+  <link rel="canonical" href="/">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:title" content="Barbearia do Fortão | Corte com hora marcada">
+  <meta property="og:description" content="Escolhe o serviço, o dia e o horário. O Fortão te espera sem fila, na Cohab 5.">
+  <meta property="og:image" content="/img/fortao-corrida.jpg">
+  <link rel="preload" href="/img/fortao-corrida.jpg" as="image" fetchpriority="high">
+  <link rel="stylesheet" href="/css/agenda.css">
+  <link rel="stylesheet" href="/css/inicio.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BarberShop",
+    "name": "Barbearia do Fortão",
+    "image": "/img/fortao-corrida.jpg",
+    "priceRange": "R$ 40 - R$ 50",
+    "address": { "@type": "PostalAddress", "addressLocality": "São Paulo", "addressRegion": "SP", "addressCountry": "BR", "streetAddress": "Cohab 5" },
+    "makesOffer": [
+      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Corte Fortão" }, "price": "40.00", "priceCurrency": "BRL" },
+      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Corte e sobrancelha" }, "price": "45.00", "priceCurrency": "BRL" },
+      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Corte e barba" }, "price": "50.00", "priceCurrency": "BRL" }
+    ]
+  }
+  </script>
+  <script type="module" src="/js/inicio.js"></script>
+</head>
+<body>
+  <!-- incluir:topo -->
+
+  <main id="conteudo">
+    <!-- HERO -->
+    <section class="hero container" id="inicio" aria-labelledby="hero-titulo">
+      <div class="hero__cartao">
+        <img src="/img/fortao-corrida.jpg" alt="Fortão sorrindo, de boné, numa pista de corrida no parque" width="598" height="820" fetchpriority="high">
+        <div class="hero__texto">
+          <p class="hero__saudacao" data-saudacao>Olá</p>
+          <h1 id="hero-titulo">Seu corte, na hora marcada.</h1>
+          <p class="hero__sub">Escolhe o serviço, o dia e o horário. O Fortão te espera sem fila.</p>
+          <a class="hero__livre" href="#agendar" data-proximo-livre hidden><i class="ph-fill ph-lightning" aria-hidden="true"></i> Próximo horário livre: <b></b></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- AGENDAR -->
+    <section class="container secao" id="agendar" aria-labelledby="agendar-titulo">
+      <h2 class="titulo" id="agendar-titulo" data-revelar>Marque em 3 toques</h2>
+      <div class="agendar__caixa" data-agendamento></div>
+    </section>
+
+    <!-- SERVIÇOS -->
+    <section class="container secao" id="servicos" aria-labelledby="servicos-titulo">
+      <h2 class="titulo" id="servicos-titulo" data-revelar>Tabela da casa</h2>
+      <p class="subtitulo" data-revelar>Preço fechado, pago na barbearia. Você vê o valor antes de confirmar.</p>
+      <ul class="tabela" data-tabela>
+        <li class="tabela__item"><span class="tabela__nome">Corte Fortão</span><span class="tabela__preco">R$ 40</span><span class="tabela__desc">O corte da casa, do jeito que você pedir.</span></li>
+        <li class="tabela__item"><span class="tabela__nome">Corte e sobrancelha</span><span class="tabela__preco">R$ 45</span><span class="tabela__desc">Corte completo com a sobrancelha alinhada.</span></li>
+        <li class="tabela__item"><span class="tabela__nome">Corte e barba</span><span class="tabela__preco">R$ 50</span><span class="tabela__desc">Cabelo e barba feitos na mesma cadeira.</span></li>
+      </ul>
+    </section>
+
+    <!-- O FORTÃO -->
+    <section class="container secao" id="fortao" aria-labelledby="fortao-titulo">
+      <div class="fortao" data-revelar>
+        <img src="/img/fortao-espelho.jpg" alt="Fortão de boné, sorrindo, tirando foto no espelho depois do treino" width="628" height="715" loading="lazy">
+        <div class="fortao__texto">
+          <h2 id="fortao-titulo">“Disciplina é o meu superpoder.”</h2>
+          <p>Corrida e treino fazem parte da rotina do Fortão. Na cadeira, o compromisso é o mesmo: horário respeitado e corte no capricho.</p>
+          <ul class="chips" aria-label="A rotina do Fortão">
+            <li class="chip"><i class="ph ph-sneaker-move" aria-hidden="true"></i>Corrida</li>
+            <li class="chip"><i class="ph ph-barbell" aria-hidden="true"></i>Treino</li>
+            <li class="chip"><i class="ph ph-scissors" aria-hidden="true"></i>Régua</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- FRASE DO DIA -->
+    <section class="container secao" aria-labelledby="frase-titulo">
+      <div class="frase" data-revelar>
+        <h2 class="frase__rotulo" id="frase-titulo"><i class="ph-fill ph-quotes" aria-hidden="true"></i> Frase do dia</h2>
+        <p class="frase__texto" data-frase aria-live="polite">Constância vence talento.</p>
+        <button class="botao botao--suave botao--p" type="button" data-outra-frase><i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Outra frase</button>
+      </div>
+    </section>
+
+    <!-- DEPOIS QUE VOCÊ MARCA -->
+    <section class="container secao" id="como" aria-labelledby="como-titulo">
+      <h2 class="titulo" id="como-titulo" data-revelar>Depois que você marca</h2>
+      <ul class="passos">
+        <li class="passo" data-revelar data-i="0"><span class="passo__icone"><i class="ph ph-envelope-simple" aria-hidden="true"></i></span><div><h3>E-mail de confirmação</h3><p>Chega na hora, com dia, horário, valor e convite para a agenda do celular.</p></div></li>
+        <li class="passo" data-revelar data-i="1"><span class="passo__icone"><i class="ph ph-bell-ringing" aria-hidden="true"></i></span><div><h3>Lembrete antes do corte</h3><p>Um dia antes e duas horas antes, por e-mail e no app.</p></div></li>
+        <li class="passo" data-revelar data-i="2"><span class="passo__icone"><i class="ph ph-arrows-left-right" aria-hidden="true"></i></span><div><h3>Remarcar é fácil</h3><p>Mudou o plano? Troque o horário pelo app até 2 horas antes.</p></div></li>
+      </ul>
+    </section>
+
+    <!-- ONDE FICA -->
+    <section class="container secao" id="onde" aria-labelledby="onde-titulo">
+      <div class="onde" data-revelar>
+        <div class="onde__mapa" data-mapa>
+          <button class="onde__mapa-botao" type="button">
+            <i class="ph ph-map-trifold" aria-hidden="true"></i>
+            <span>Carregar mapa aqui</span>
+            <small>O mapa é do Google e só carrega se você tocar.</small>
+          </button>
+        </div>
+        <div class="onde__info">
+          <h2 id="onde-titulo">Cohab 5, São Paulo</h2>
+          <address data-endereco>Endereço completo em breve.</address>
+          <ul class="chips" data-funcionamento aria-label="Horário de funcionamento"></ul>
+          <div class="onde__acoes">
+            <a class="botao botao--suave" href="https://www.google.com/maps/search/?api=1&amp;query=Barbearia+do+Fort%C3%A3o+Cohab+5+S%C3%A3o+Paulo" target="_blank" rel="noopener" data-rota><i class="ph ph-navigation-arrow" aria-hidden="true"></i> Traçar rota</a>
+            <a class="botao botao--suave" href="#" target="_blank" rel="noopener" data-whatsapp hidden><i class="ph ph-whatsapp-logo" aria-hidden="true"></i> WhatsApp</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- incluir:rodape -->
+  <!-- incluir:abas -->
+
+  <!-- Folha: horário marcado -->
+  <dialog class="folha" data-folha-sucesso aria-labelledby="sucesso-titulo">
+    <div class="folha__alca" aria-hidden="true"></div>
+    <div class="folha__corpo">
+      <div class="sucesso__icone"><i class="ph-fill ph-check-circle" aria-hidden="true"></i></div>
+      <h2 class="titulo" id="sucesso-titulo">Fechou! Horário marcado.</h2>
+      <p class="subtitulo" data-sucesso-texto></p>
+      <p class="subtitulo">A confirmação chegou no seu e-mail. Vamos te lembrar antes.</p>
+      <button class="botao botao--linha botao--bloco" type="button" data-sucesso-push hidden><i class="ph ph-bell-ringing" aria-hidden="true"></i> Receber lembrete no celular</button>
+      <a class="botao botao--cheio botao--bloco" href="/conta#horarios">Ver meus horários</a>
+    </div>
+  </dialog>
+
+  <!-- Folha: precisa entrar -->
+  <dialog class="folha" data-folha-entrar aria-labelledby="entrar-titulo">
+    <div class="folha__alca" aria-hidden="true"></div>
+    <div class="folha__corpo">
+      <h2 class="titulo" id="entrar-titulo">Falta só entrar</h2>
+      <p class="subtitulo" data-entrar-texto>Seu horário fica guardado. Entre ou crie a conta em menos de um minuto para confirmar.</p>
+      <a class="botao botao--cheio botao--bloco" href="/cadastro?volta=/agendar">Criar conta</a>
+      <a class="botao botao--linha botao--bloco" href="/entrar?volta=/agendar">Já tenho conta</a>
+    </div>
+  </dialog>
+</body>
+</html>

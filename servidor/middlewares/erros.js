@@ -1,18 +1,20 @@
 // Respostas de erro padronizadas. Detalhe técnico vai só para o log, nunca para o cliente.
-import path from 'node:path';
-import { RAIZ } from '../config.js';
 import { ErroApp } from '../lib/erros.js';
+import { montarPagina } from '../paginas.js';
 import { log } from '../lib/log.js';
 
 export function apiNaoEncontrada(_req, res) {
   res.status(404).json({ erro: 'Rota não encontrada.', codigo: 'nao_encontrado' });
 }
 
-export function paginaNaoEncontrada(_req, res) {
-  res.status(404).sendFile(path.join(RAIZ, 'publico', '404.html'));
+export async function paginaNaoEncontrada(_req, res, next) {
+  try {
+    res.status(404).type('html').send((await montarPagina('404')) || 'Página não encontrada.');
+  } catch (e) {
+    next(e);
+  }
 }
 
-// eslint-disable-next-line no-unused-vars
 export function tratarErros(erro, req, res, _next) {
   if (erro instanceof ErroApp) {
     return res.status(erro.status).json({ erro: erro.message, codigo: erro.codigo, campos: erro.campos });

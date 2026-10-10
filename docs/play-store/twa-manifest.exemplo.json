@@ -1,0 +1,27 @@
+{
+  "packageId": "br.com.barbeariadofortao.app",
+  "host": "barbeariadofortao.com.br",
+  "name": "Barbearia do Fortão",
+  "launcherName": "Fortão",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#0b0b0c",
+  "themeColorDark": "#0b0b0c",
+  "navigationColor": "#0b0b0c",
+  "navigationColorDark": "#0b0b0c",
+  "backgroundColor": "#0b0b0c",
+  "enableNotifications": true,
+  "startUrl": "/?origem=app",
+  "iconUrl": "https://barbeariadofortao.com.br/img/icone-512.png",
+  "maskableIconUrl": "https://barbeariadofortao.com.br/img/icone-maskable-512.png",
+  "webManifestUrl": "https://barbeariadofortao.com.br/manifest.webmanifest",
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    { "name": "Marcar horário", "shortName": "Marcar", "url": "/agendar", "chosenIconUrl": "https://barbeariadofortao.com.br/img/icone-192.png" },
+    { "name": "Meus horários", "shortName": "Horários", "url": "/conta#horarios", "chosenIconUrl": "https://barbeariadofortao.com.br/img/icone-192.png" }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "fallbackType": "customtabs",
+  "minSdkVersion": 21
+}

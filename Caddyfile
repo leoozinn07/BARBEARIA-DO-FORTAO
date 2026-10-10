@@ -1,0 +1,5 @@
+# HTTPS automático. O Caddy pede e renova o certificado sozinho.
+{$DOMINIO}, www.{$DOMINIO} {
+	encode zstd gzip
+	reverse_proxy app:3000
+}
