@@ -1,12 +1,10 @@
-// Cada acontecimento da agenda vira e-mail + WhatsApp na fila + aviso no sino do site, gravados na mesma transação.
+// Cada acontecimento da agenda vira e-mail na fila + aviso no sino do site, gravados na mesma transação.
 // Depois do commit, `entregarAgora()` pede a entrega sem esperar o próximo ciclo.
 import { config } from '../config.js';
 import { consulta, umaLinha } from '../db/index.js';
 import * as modelos from '../emails/modelos.js';
 import { enfileirarEmail, acordarEntregador } from '../emails/fila.js';
 import { descreverDataHora, reais } from '../lib/tempo.js';
-import { acordarWhatsapp, enfileirarWhatsapp } from '../whatsapp/fila.js';
-import * as whatsapp from '../whatsapp/mensagens.js';
 import { enderecoCompleto, lerConfiguracoes } from './configuracoes.js';
 
 export async function criarAviso(conn, { usuarioId, tipo, titulo, corpo, link = null }) {
@@ -23,17 +21,9 @@ async function emailDoCliente(conn, clienteId) {
   return umaLinha('SELECT nome, email FROM usuarios WHERE id = ? AND excluido_em IS NULL', [clienteId], conn);
 }
 
-/** Chame depois do commit: entrega e-mails e mensagens de WhatsApp da fila sem esperar o próximo ciclo. */
+/** Chame depois do commit: entrega os e-mails da fila sem esperar o próximo ciclo. */
 export function entregarAgora() {
   acordarEntregador();
-  acordarWhatsapp();
-}
-
-/** WhatsApp para o cliente do horário, se ele pediu lembrete por lá (vale também para cliente do balcão). */
-async function avisarNoWhatsapp(conn, ag, mensagem) {
-  if (!ag.whatsapp_lembrete || !ag.cliente_telefone) return;
-  const nome = String(ag.cliente_nome || '').trim().split(/\s+/)[0] || 'cliente';
-  await enfileirarWhatsapp(conn, { para: ag.cliente_telefone, agendamentoId: ag.id, ...mensagem({ nome, servico: ag.servico_nome, quando: descreverDataHora(ag.inicio), valor: reais(ag.preco_centavos) }) });
 }
 
 export async function aoAgendar(conn, ag) {
@@ -41,7 +31,6 @@ export async function aoAgendar(conn, ag) {
   const endereco = enderecoCompleto(negocio);
   const quando = descreverDataHora(ag.inicio);
   const valor = reais(ag.preco_centavos);
-  await avisarNoWhatsapp(conn, ag, whatsapp.confirmacao);
   const cliente = await emailDoCliente(conn, ag.cliente_id);
   if (cliente) {
     const m = modelos.agendamentoConfirmado({ nome: cliente.nome, servico: ag.servico_nome, quando, valor, endereco, codigo: ag.codigo });
@@ -64,7 +53,6 @@ export async function aoRemarcar(conn, ag, inicioAnterior) {
   const endereco = enderecoCompleto(negocio);
   const quando = descreverDataHora(ag.inicio);
   const anterior = descreverDataHora(inicioAnterior);
-  await avisarNoWhatsapp(conn, ag, whatsapp.remarcado);
   const cliente = await emailDoCliente(conn, ag.cliente_id);
   if (cliente) {
     const m = modelos.agendamentoRemarcado({ nome: cliente.nome, servico: ag.servico_nome, quando, anterior, endereco, codigo: ag.codigo });
@@ -76,10 +64,8 @@ export async function aoRemarcar(conn, ag, inicioAnterior) {
   for (const a of equipe) await criarAviso(conn, { usuarioId: a.id, tipo: 'remarcado', titulo: 'Cliente remarcou', corpo, link: '/admin' });
 }
 
-export async function aoCancelar(conn, ag, { porAdmin, motivo, peloWhatsapp = false }) {
+export async function aoCancelar(conn, ag, { porAdmin, motivo }) {
   const quando = descreverDataHora(ag.inicio);
-  // Quem cancelou pelo WhatsApp já recebe a resposta do robô ali mesmo
-  if (!peloWhatsapp) await avisarNoWhatsapp(conn, ag, whatsapp.cancelado);
   const cliente = await emailDoCliente(conn, ag.cliente_id);
   if (cliente) {
     const m = modelos.agendamentoCancelado({ nome: cliente.nome, servico: ag.servico_nome, quando, motivo, porAdmin });
@@ -98,7 +84,6 @@ export async function aoCancelar(conn, ag, { porAdmin, motivo, peloWhatsapp = fa
 }
 
 export async function aoLembrar(conn, ag, tipo) {
-  await avisarNoWhatsapp(conn, ag, whatsapp.lembrete);
   const cliente = await emailDoCliente(conn, ag.cliente_id);
   if (!cliente) return;
   const { negocio } = await lerConfiguracoes();

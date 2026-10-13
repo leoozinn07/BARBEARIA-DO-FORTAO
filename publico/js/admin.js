@@ -1,6 +1,7 @@
 // Painel do Fortão: resumo, agenda do dia, rendimento, novo horário, folgas, serviços, funcionamento, barbearia e clientes.
 import { del, get, post, put } from './api.js';
 import { iniciarCasca } from './casca.js';
+import { abrirMensagem, linkWhatsapp, salvarContato } from './contato.js';
 import { montarRendimento } from './rendimento.js';
 import {
   abrirFolha, dataLonga, h, hojeISO, hora, icone, limparErros, mostrarErros, ocupado, reais, relativo, telefoneBonito, toast, toastErro,
@@ -17,7 +18,6 @@ const STATUS = { confirmado: 'Confirmado', concluido: 'Concluído', cancelado: '
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 const somarDias = (iso, n) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const meioDia = (iso) => `${iso}T12:00:00-03:00`;
-const whatsapp = (t) => `https://wa.me/${String(t).startsWith('55') ? '' : '55'}${t}`;
 let dia = hojeISO();
 let servicos = [];
 
@@ -43,7 +43,6 @@ async function carregarResumo() {
   try {
     const r = await get(`/admin/resumo?data=${dia}`);
     $('[data-aviso-email]').hidden = r.email_real;
-    $('[data-aviso-whatsapp]').hidden = r.whatsapp_real;
     const ativos = (x) => x.total - x.cancelados;
     $('[data-resumo]').replaceChildren(
       h('div', { class: 'resumo__item' }, h('small', {}, dia === hojeISO() ? 'Hoje' : 'Neste dia'), h('b', {}, String(ativos(r.dia))), h('span', {}, `horários, ${reais(r.dia.previsto_centavos)}`)),
@@ -78,21 +77,29 @@ function itemAgendamento(ag) {
   } else if (ag.status === 'concluido' || ag.status === 'faltou') {
     acoes.push(h('button', { class: 'botao botao--suave', type: 'button', onclick: () => mudarStatus(ag, 'confirmado') }, icone('arrow-counter-clockwise'), 'Desfazer'));
   }
+  if (ag.cliente_telefone) {
+    acoes.push(h('button', { class: 'botao botao--suave', type: 'button', onclick: () => mensagemDoHorario(ag) }, icone('whatsapp-logo'), 'Mensagem'));
+  }
   return h('li', { class: 'item-agenda', 'data-status': ag.status },
     h('div', { class: 'item-agenda__hora' }, h('b', {}, hora(ag.inicio)), h('small', {}, `até ${hora(ag.fim)}`)),
     h('div', { class: 'item-agenda__corpo' },
       h('p', { class: 'item-agenda__nome' }, ag.cliente_nome, h('span', { class: `selo selo--${ag.status}` }, STATUS[ag.status]),
-        ag.origem === 'admin' ? h('span', { class: 'selo' }, 'Balcão') : null,
-        ag.presenca_confirmada && ag.status === 'confirmado' ? h('span', { class: 'selo selo--ouro' }, icone('whatsapp-logo'), 'Confirmou') : null),
+        ag.origem === 'admin' ? h('span', { class: 'selo' }, 'Balcão') : null),
       h('p', { class: 'item-agenda__detalhe' },
         h('span', {}, `${ag.servico}, ${reais(ag.preco_centavos)}`),
-        ag.cliente_telefone ? h('a', { href: whatsapp(ag.cliente_telefone), target: '_blank', rel: 'noopener' }, icone('whatsapp-logo'), ` ${telefoneBonito(ag.cliente_telefone)}`) : null,
+        ag.cliente_telefone ? h('a', { href: linkWhatsapp(ag.cliente_telefone), target: '_blank', rel: 'noopener' }, icone('whatsapp-logo'), ` ${telefoneBonito(ag.cliente_telefone)}`) : null,
         ag.observacao ? h('span', {}, `Obs.: ${ag.observacao}`) : null,
         ag.status === 'cancelado' && ag.motivo_cancelamento ? h('span', {}, `Motivo: ${ag.motivo_cancelamento}`) : null,
       ),
       acoes.length ? h('div', { class: 'item-agenda__acoes' }, ...acoes) : null,
     ),
   );
+}
+
+/** Mensagem pronta para o cliente do horário, no WhatsApp do próprio Fortão. */
+function mensagemDoHorario(ag, modelo) {
+  const futuro = ag.status === 'confirmado' && new Date(ag.inicio).getTime() > Date.now();
+  abrirMensagem({ nome: ag.cliente_nome, telefone: ag.cliente_telefone, email: ag.cliente_email, ag, modelo: modelo ?? (futuro ? 'lembrete' : 'livre') });
 }
 
 function itemBloqueio(b) {
@@ -180,7 +187,7 @@ formNovo.addEventListener('submit', async (ev) => {
   if (!inicio) { mostrarErros(formNovo, { campos: { inicio: 'Escolha um horário.' } }); return; }
   ocupado(botao, true);
   try {
-    const corpo = { servico: f.servico.value, adicionais: adicionaisDoNovo(), inicio, observacao: f.observacao.value || undefined, whatsapp: f.whatsapp.checked };
+    const corpo = { servico: f.servico.value, adicionais: adicionaisDoNovo(), inicio, observacao: f.observacao.value || undefined };
     if (f.tipo.value === 'conta') corpo.email_cliente = f.email_cliente.value; else Object.assign(corpo, { nome: f.nome.value, telefone: f.telefone.value });
     const { agendamento } = await post('/admin/agendamentos', corpo);
     folhaNovo.close();
@@ -211,10 +218,12 @@ formCancelar.addEventListener('submit', async (ev) => {
   const botao = formCancelar.querySelector('[type="submit"]');
   ocupado(botao, true);
   try {
-    await post(`/admin/agendamentos/${alvo.codigo}/cancelar`, { motivo: formCancelar.elements.motivo.value || undefined });
+    const { agendamento } = await post(`/admin/agendamentos/${alvo.codigo}/cancelar`, { motivo: formCancelar.elements.motivo.value || undefined });
     folhaCancelar.close();
     toast({ titulo: 'Horário cancelado', texto: alvo.cliente_email ? 'O cliente foi avisado por e-mail e na conta dele.' : 'Avise o cliente pelo WhatsApp.' });
     carregarAgenda();
+    // Cliente do balcão não tem e-mail: a mensagem de aviso já abre pronta
+    if (!alvo.cliente_email && alvo.cliente_telefone) mensagemDoHorario({ ...alvo, ...agendamento }, 'cancelado');
   } catch (e) { mostrarErros(formCancelar, e); } finally { ocupado(botao, false); }
 });
 
@@ -237,10 +246,11 @@ formRemarcar.addEventListener('submit', async (ev) => {
   const botao = formRemarcar.querySelector('[type="submit"]');
   ocupado(botao, true);
   try {
-    await post(`/admin/agendamentos/${alvo.codigo}/remarcar`, { inicio });
+    const { agendamento } = await post(`/admin/agendamentos/${alvo.codigo}/remarcar`, { inicio });
     folhaRemarcar.close();
     toast({ titulo: 'Remarcado', texto: alvo.cliente_email ? 'O cliente recebeu o novo horário por e-mail.' : 'Avise o cliente pelo WhatsApp.' });
     carregarAgenda();
+    if (!alvo.cliente_email && alvo.cliente_telefone) mensagemDoHorario({ ...alvo, ...agendamento }, 'remarcado');
   } catch (e) { mostrarErros(formRemarcar, e); } finally { ocupado(botao, false); }
 });
 
@@ -440,7 +450,9 @@ async function buscarClientes(q) {
     lista.replaceChildren(...(clientes.length ? clientes.map((c) => h('li', {},
       h('div', {}, h('b', {}, c.nome), h('small', {}, [c.email, telefoneBonito(c.telefone)].filter(Boolean).join(' · ')),
         h('small', {}, `${c.concluidos} corte${c.concluidos === 1 ? '' : 's'}${c.faltas ? `, ${c.faltas} falta${c.faltas === 1 ? '' : 's'}` : ''}${c.ultimo ? `, último ${relativo(c.ultimo)}` : ''}`)),
-      c.telefone ? h('a', { class: 'icone-botao', href: whatsapp(c.telefone), target: '_blank', rel: 'noopener', 'aria-label': `WhatsApp de ${c.nome}` }, icone('whatsapp-logo')) : h('span'),
+      c.telefone ? h('div', { class: 'lista-admin__acoes' },
+        h('button', { class: 'icone-botao', type: 'button', 'aria-label': `Salvar contato de ${c.nome}`, title: 'Salvar contato', onclick: () => salvarContato({ nome: c.nome, telefone: c.telefone, email: c.email }) }, icone('address-book')),
+        h('button', { class: 'icone-botao', type: 'button', 'aria-label': `Mensagem no WhatsApp para ${c.nome}`, title: 'Mensagem no WhatsApp', onclick: () => abrirMensagem({ nome: c.nome, telefone: c.telefone, email: c.email }) }, icone('whatsapp-logo'))) : h('span'),
     )) : [h('li', {}, h('small', {}, q ? 'Ninguém encontrado.' : 'Os clientes com conta aparecem aqui.'))]));
   } catch (e) { lista.replaceChildren(h('li', { class: 'alerta alerta--erro' }, e.message)); }
 }

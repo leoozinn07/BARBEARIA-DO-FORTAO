@@ -6,11 +6,12 @@ import * as modelos from '../emails/modelos.js';
 import { acordarEntregador, enfileirarEmail } from '../emails/fila.js';
 import { erros } from '../lib/erros.js';
 import { conferirSenha, hashSenha, motivoSenhaFraca } from '../lib/seguranca.js';
-import { campos, validar, z } from '../lib/validacao.js';
+import { campos, esquemasBiometria, validar, z } from '../lib/validacao.js';
 import { limites } from '../middlewares/limites.js';
 import { encerrarSessao, encerrarTodas, exigirLogin } from '../middlewares/sessao.js';
 import { anexarAdicionais, cancelarAgendamento, criarAgendamento, paraCliente, remarcarAgendamento } from '../servicos/agenda.js';
 import { auditar } from '../servicos/auditoria.js';
+import { concluirCadastro, listarDaConta, opcoesCadastro, removerDaConta } from '../servicos/biometria.js';
 import { lerConfiguracoes } from '../servicos/configuracoes.js';
 import { criarAviso } from '../servicos/eventos.js';
 import { rota, usuarioPublico } from './comum.js';
@@ -71,15 +72,56 @@ rotasConta.post('/conta/senha', limites.senha, validar(z.object({ senha_atual: c
   res.json({ ok: true });
 }));
 
+// ------------------------------------------------------------------ biometria
+// Ativar pede a senha, a não ser logo depois de entrar: quem pega um celular desbloqueado com a conta aberta
+// não consegue cadastrar a própria digital sem saber a senha.
+const MINUTOS_SEM_SENHA = 10;
+
+rotasConta.get('/conta/biometria', rota(async (req, res) => {
+  res.set('Cache-Control', 'no-store').json({ aparelhos: await listarDaConta(req.usuario.id) });
+}));
+
+rotasConta.post('/conta/biometria/opcoes', limites.biometria, validar(z.object({ senha: campos.senha.optional() })), rota(async (req, res) => {
+  const recente = Date.now() - req.sessao.criadaEm.getTime() < MINUTOS_SEM_SENHA * 60000;
+  if (!recente) {
+    if (!req.dados.senha) throw erros.requisicao('Confirme sua senha para ativar a biometria.', { codigo: 'confirmar_senha' });
+    const { senha_hash: hashAtual } = await umaLinha('SELECT senha_hash FROM usuarios WHERE id = ?', [req.usuario.id]);
+    if (!(await conferirSenha(hashAtual, req.dados.senha))) throw erros.validacao({ senha: 'Senha incorreta.' });
+  }
+  res.set('Cache-Control', 'no-store').json({ opcoes: await opcoesCadastro(req.usuario) });
+}));
+
+rotasConta.post('/conta/biometria', limites.biometria, validar(z.object({ resposta: esquemasBiometria.cadastro })), rota(async (req, res) => {
+  const u = req.usuario;
+  const id = await concluirCadastro(u, req.dados.resposta, req.get('user-agent'));
+  const aparelhos = await listarDaConta(u.id);
+  const novo = aparelhos.find((a) => a.id === id);
+  await transacao(async (conn) => {
+    await enfileirarEmail(conn, { para: u.email, ...modelos.biometriaAtivada({ nome: u.nome, aparelho: novo?.aparelho }) });
+    await criarAviso(conn, { usuarioId: u.id, tipo: 'seguranca', titulo: 'Biometria ativada', corpo: `Agora você entra com a biometria do ${novo?.aparelho ?? 'aparelho'}.`, link: '/conta#perfil' });
+  });
+  acordarEntregador();
+  await auditar({ usuarioId: u.id, acao: 'biometria_ativada', alvo: String(id), ip: req.ip });
+  res.status(201).json({ aparelhos });
+}));
+
+rotasConta.delete('/conta/biometria/:id', validar(z.object({ id: z.coerce.number().int().positive() }), 'params'), rota(async (req, res) => {
+  const removidos = await removerDaConta(req.usuario.id, req.dados.id);
+  if (!removidos) throw erros.naoEncontrado('Esse aparelho já tinha sido removido.');
+  await auditar({ usuarioId: req.usuario.id, acao: 'biometria_removida', alvo: String(req.dados.id), ip: req.ip });
+  res.json({ aparelhos: await listarDaConta(req.usuario.id) });
+}));
+
 // ------------------------------------------------------------------ LGPD
 rotasConta.get('/conta/dados', rota(async (req, res) => {
   const id = req.usuario.id;
-  const [perfil, consentimentos, agendamentos, notificacoes, sessoes] = await Promise.all([
+  const [perfil, consentimentos, agendamentos, notificacoes, sessoes, biometria] = await Promise.all([
     umaLinha('SELECT nome, email, telefone, papel, email_verificado_em, marketing, preferencias, criado_em, atualizado_em FROM usuarios WHERE id = ?', [id]),
     consulta('SELECT tipo, versao, aceito, criado_em FROM consentimentos WHERE usuario_id = ? ORDER BY id', [id]),
     consulta('SELECT codigo, servico_nome, preco_centavos, duracao_min, inicio, fim, status, cancelado_por, motivo_cancelamento, criado_em FROM agendamentos WHERE cliente_id = ? ORDER BY inicio', [id]),
     consulta('SELECT tipo, titulo, corpo, lida_em, criado_em FROM notificacoes WHERE usuario_id = ? ORDER BY id', [id]),
     consulta('SELECT criado_em, ultimo_uso_em, expira_em, ip, agente FROM sessoes WHERE usuario_id = ? ORDER BY id', [id]),
+    consulta('SELECT aparelho, criado_em, ultimo_uso_em FROM biometria_credenciais WHERE usuario_id = ? ORDER BY id', [id]),
   ]);
   await auditar({ usuarioId: id, acao: 'exportou_dados', ip: req.ip });
   res
@@ -93,6 +135,8 @@ rotasConta.get('/conta/dados', rota(async (req, res) => {
       agendamentos,
       notificacoes,
       sessoes,
+      // Só o aparelho e as datas: a chave pública não identifica ninguém e a biometria nunca sai do celular
+      biometria,
     });
 }));
 
@@ -120,13 +164,13 @@ rotasConta.post('/conta/excluir', limites.senha, validar(z.object({ senha: campo
     // Anonimiza: o histórico de atendimentos fica, sem nada que identifique a pessoa
     await consulta(
       `UPDATE usuarios SET nome = 'Cliente removido', email = CONCAT('removido-', id, '@excluido.invalid'), telefone = NULL,
-         senha_hash = '!', marketing = 0, preferencias = NULL, email_verificado_em = NULL, excluido_em = UTC_TIMESTAMP() WHERE id = ?`,
+         senha_hash = '!', marketing = 0, preferencias = NULL, biometria_id = NULL, email_verificado_em = NULL, excluido_em = UTC_TIMESTAMP() WHERE id = ?`,
       [u.id], conn,
     );
     await consulta("UPDATE agendamentos SET cliente_nome = 'Cliente removido', cliente_telefone = NULL WHERE cliente_id = ?", [u.id], conn);
     await consulta('UPDATE consentimentos SET ip = NULL WHERE usuario_id = ?', [u.id], conn);
     await consulta('UPDATE auditoria SET ip = NULL WHERE usuario_id = ?', [u.id], conn);
-    for (const tabela of ['notificacoes', 'tokens_uso_unico']) {
+    for (const tabela of ['notificacoes', 'tokens_uso_unico', 'biometria_credenciais', 'biometria_desafios']) {
       await consulta(`DELETE FROM ${tabela} WHERE usuario_id = ?`, [u.id], conn);
     }
     await consulta('DELETE FROM sessoes WHERE usuario_id = ?', [u.id], conn);
@@ -153,13 +197,13 @@ rotasConta.get('/conta/agendamentos', rota(async (req, res) => {
   });
 }));
 
-// Marcar exige o telefone (mini formulário da confirmação): é por ele que vão a confirmação e os lembretes no WhatsApp
+// Marcar exige o telefone (mini formulário da confirmação): é por ele que o Fortão fala com o cliente, se precisar.
+// A confirmação e os lembretes vão por e-mail.
 const esquemaMarcar = z.object({
   servico: campos.slug,
   adicionais: campos.adicionais,
   inicio: campos.instante,
   telefone: campos.telefoneObrigatorio,
-  whatsapp: z.boolean().optional().default(true),
 });
 
 rotasConta.post('/agendamentos', limites.agendar, validar(esquemaMarcar), rota(async (req, res) => {
@@ -168,20 +212,11 @@ rotasConta.post('/agendamentos', limites.agendar, validar(esquemaMarcar), rota(a
   const u = req.usuario;
   // O número informado vira o telefone da conta (o cliente pode mudar depois no perfil)
   if (d.telefone !== u.telefone) await consulta('UPDATE usuarios SET telefone = ? WHERE id = ?', [d.telefone, u.id]);
-  if (d.whatsapp) {
-    const ultimo = await umaLinha("SELECT aceito FROM consentimentos WHERE usuario_id = ? AND tipo = 'whatsapp' ORDER BY id DESC LIMIT 1", [u.id]);
-    if (!ultimo?.aceito) {
-      await consulta('INSERT INTO consentimentos (usuario_id, tipo, versao, aceito, ip) VALUES (?, ?, ?, ?, ?)', [
-        u.id, 'whatsapp', config.versaoPrivacidade, 1, req.ip?.slice(0, 45) ?? null,
-      ]);
-    }
-  }
   const ag = await criarAgendamento({
     cliente: { id: u.id, nome: u.nome, telefone: d.telefone },
     slug: d.servico,
     adicionais: d.adicionais,
     inicio: d.inicio,
-    whatsapp: d.whatsapp,
   });
   await anexarAdicionais([ag]);
   res.status(201).json({ agendamento: paraCliente(ag, agenda) });

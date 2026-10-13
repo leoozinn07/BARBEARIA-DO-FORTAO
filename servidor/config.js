@@ -51,27 +51,8 @@ export const config = {
     pastaLocal: path.join(RAIZ, 'var', 'emails'),
   },
 
-  // WhatsApp Cloud API (Meta), passo a passo em docs/whatsapp.md.
-  // Sem token, as mensagens ficam salvas em var/whatsapp/ e o painel avisa que o WhatsApp ainda não está ligado.
-  whatsapp: {
-    token: env.WHATSAPP_TOKEN || '',
-    numeroId: env.WHATSAPP_NUMERO_ID || '',
-    versaoApi: env.WHATSAPP_VERSAO_API || 'v21.0',
-    idioma: env.WHATSAPP_IDIOMA || 'pt_BR',
-    // Webhook: o código que você inventa e cola na Meta, e o "App secret" que confere a assinatura de cada aviso
-    tokenVerificacao: env.WHATSAPP_TOKEN_VERIFICACAO || '',
-    segredoApp: env.WHATSAPP_SEGREDO_APP || '',
-    modelos: {
-      confirmacao: env.WHATSAPP_MODELO_CONFIRMACAO || 'horario_confirmado',
-      lembrete: env.WHATSAPP_MODELO_LEMBRETE || 'lembrete_horario',
-      remarcado: env.WHATSAPP_MODELO_REMARCADO || 'horario_remarcado',
-      cancelado: env.WHATSAPP_MODELO_CANCELADO || 'horario_cancelado',
-    },
-    pastaLocal: path.join(RAIZ, 'var', 'whatsapp'),
-  },
-
-  versaoTermos: env.VERSAO_TERMOS || '2026-10-10',
-  versaoPrivacidade: env.VERSAO_PRIVACIDADE || '2026-10-10',
+  versaoTermos: env.VERSAO_TERMOS || '2026-10-13',
+  versaoPrivacidade: env.VERSAO_PRIVACIDADE || '2026-10-13',
 };
 
 export const FUSO = 'America/Sao_Paulo';

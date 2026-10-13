@@ -1,10 +1,11 @@
 // Minha conta: horários (remarcar, cancelar, agenda do celular), perfil, aparência, senha e LGPD.
-import { get, invalidarSessao, patch, post } from './api.js';
+import { del, get, invalidarSessao, patch, post } from './api.js';
 import { definirTema, iniciarCasca, obterConfig } from './casca.js';
 import { montarAgendamento } from './agendamento.js';
+import { ativarBiometria, erroDaBiometria, temBiometriaNoAparelho, temSuporte } from './biometria.js';
 import { acoesLembrete } from './lembrete.js';
 import {
-  abrirFolha, dataCurta, h, hora, icone, ligarVerSenha, limparErros, mostrarErros, ocupado, primeiroNome, quando, reais, telefoneBonito, toast, toastErro,
+  abrirFolha, dataCurta, h, hora, icone, ligarVerSenha, limparErros, mostrarErros, ocupado, primeiroNome, quando, reais, relativo, telefoneBonito, toast, toastErro,
 } from './ui.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -48,7 +49,7 @@ let config = null;
 function abrirLembrete(ag) {
   const folha = $('[data-folha-lembrete]');
   $('[data-lembrete-texto]').textContent = `${ag.servico}, ${quando(ag.inicio)}.`;
-  $('[data-lembrete-acoes]').replaceChildren(acoesLembrete(ag, config));
+  $('[data-lembrete-acoes]').replaceChildren(acoesLembrete(ag, config, usuario.email));
   abrirFolha(folha);
 }
 
@@ -63,7 +64,7 @@ function cartaoHorario(ag) {
       h('span', {}, icone('currency-circle-dollar'), `${reais(ag.preco_centavos)} na barbearia`),
       h('span', {}, icone('timer'), `${ag.duracao_min} min`),
       h('span', {}, icone('hash'), ag.codigo),
-      ag.whatsapp_lembrete ? h('span', {}, icone('whatsapp-logo'), ag.presenca_confirmada ? 'Presença confirmada' : 'Lembrete no WhatsApp') : null,
+      ag.status === 'confirmado' ? h('span', {}, icone('envelope-simple'), 'Lembrete por e-mail') : null,
     ),
     h('div', { class: 'horario__acoes' },
       h('button', { class: 'botao botao--suave', type: 'button', onclick: () => abrirLembrete(ag) }, icone('bell-ringing'), 'Lembrete'),
@@ -214,6 +215,87 @@ $('[data-sair]').addEventListener('click', async () => {
   invalidarSessao();
   location.replace('/');
 });
+
+// ---------------------------------------------------------------- biometria
+const listaAparelhos = $('[data-aparelhos]');
+const botaoAtivar = $('[data-biometria-ativar]');
+const folhaBiometria = $('[data-folha-biometria]');
+const formBiometria = $('[data-form-biometria]');
+const sugestao = $('[data-sugerir-biometria]');
+const CHAVE_SUGESTAO = 'fortao:biometria-sugestao';
+let aparelhos = [];
+
+function desenharAparelhos() {
+  listaAparelhos.replaceChildren(...aparelhos.map((a) => h('li', {},
+    icone(/iPhone|iPad|Android/.test(a.aparelho) ? 'device-mobile' : 'desktop'),
+    h('div', {},
+      h('b', {}, a.aparelho),
+      h('small', {}, [`Ativada em ${dataCurta(a.criado_em)}`, a.ultimo_uso_em ? `último uso ${relativo(a.ultimo_uso_em)}` : null, a.sincronizada ? 'sincronizada na conta Google ou Apple' : null].filter(Boolean).join(' · '))),
+    h('button', { class: 'icone-botao', type: 'button', 'aria-label': `Remover a biometria do ${a.aparelho}`, title: 'Remover', onclick: () => removerAparelho(a) }, icone('trash')),
+  )));
+  listaAparelhos.hidden = !aparelhos.length;
+}
+
+async function removerAparelho(a) {
+  try {
+    ({ aparelhos } = await del(`/conta/biometria/${a.id}`));
+    desenharAparelhos();
+    toast({ titulo: 'Biometria removida', texto: `O ${a.aparelho} volta a entrar só com a senha.` });
+  } catch (e) { toastErro(e); }
+}
+
+function fecharSugestao(lembrar) {
+  sugestao.hidden = true;
+  if (lembrar) try { localStorage.setItem(CHAVE_SUGESTAO, 'fechada'); } catch { /* sem armazenamento */ }
+}
+
+async function ativar(senha) {
+  const botao = folhaBiometria.open ? formBiometria.querySelector('[type="submit"]') : botaoAtivar;
+  ocupado(botao, true);
+  try {
+    ({ aparelhos } = await ativarBiometria(senha));
+    desenharAparelhos();
+    if (folhaBiometria.open) folhaBiometria.close();
+    fecharSugestao(true);
+    toast({ titulo: 'Biometria ativada', texto: 'Da próxima vez, toque em "Entrar com biometria".' });
+  } catch (e) {
+    // Sessão antiga: pede a senha e tenta de novo
+    if (e.codigo === 'confirmar_senha') {
+      formBiometria.reset();
+      limparErros(formBiometria);
+      abrirFolha(folhaBiometria);
+      formBiometria.elements.senha.focus();
+      return;
+    }
+    const erro = erroDaBiometria(e);
+    if (erro.cancelado) return;
+    if (folhaBiometria.open) mostrarErros(formBiometria, erro); else toastErro(erro);
+  } finally {
+    ocupado(botao, false);
+  }
+}
+
+botaoAtivar.addEventListener('click', () => ativar());
+formBiometria.addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  limparErros(formBiometria);
+  ativar(formBiometria.elements.senha.value);
+});
+$('[data-sugestao-ativar]').addEventListener('click', () => { location.hash = 'perfil'; ativar(); });
+$('[data-sugestao-fechar]').addEventListener('click', () => fecharSugestao(true));
+
+if (!temSuporte()) {
+  botaoAtivar.hidden = true;
+  $('[data-biometria-sem-suporte]').hidden = false;
+}
+get('/conta/biometria').then(async (r) => {
+  aparelhos = r.aparelhos;
+  desenharAparelhos();
+  let fechada = false;
+  try { fechada = localStorage.getItem(CHAVE_SUGESTAO) === 'fechada'; } catch { /* sem armazenamento */ }
+  // Sugere uma vez, só em aparelho com digital, rosto ou PIN e para quem ainda não usa
+  if (!aparelhos.length && !fechada && await temBiometriaNoAparelho()) sugestao.hidden = false;
+}).catch(() => {});
 
 // ---------------------------------------------------------------- excluir conta
 const folhaExcluir = $('[data-folha-excluir]');

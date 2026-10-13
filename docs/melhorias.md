@@ -35,6 +35,8 @@ Tudo aqui é opcional. Escolha o que entra e em que ordem.
 | Avaliação depois do corte | E-mail pedindo nota e link para o Google Maps, que ajuda a aparecer nas buscas da região. | Baixo |
 | Vários barbeiros | O banco já aceita; falta a escolha do barbeiro na tela de marcar e o rendimento por barbeiro. | Médio |
 | Estatísticas sem cookies | Visitas e conversão com Plausible ou Umami, sem banner de cookies. | Baixo |
+| Lembrete automático no WhatsApp | Volta o envio automático pela API oficial da Meta (paga por conversa, alguns centavos cada). Hoje o Fortão manda pelo painel, de graça. | Médio |
+| Lista de transmissão | Mensagem pronta para vários clientes de uma vez (promoção, feriado), aberta um a um no WhatsApp do Fortão. | Baixo |
 
 ## Inteligência a partir dos dados
 
@@ -49,7 +51,6 @@ Isso precisa de dados reais acumulados. O banco já guarda o histórico no forma
 ## Antes do lançamento (pendências)
 
 1. Endereço exato, WhatsApp, Instagram, razão social e CNPJ no painel.
-2. Domínio e e-mail com SPF/DKIM configurados.
-3. Conta no Meta Business, número do WhatsApp e os 4 modelos aprovados ([whatsapp.md](whatsapp.md)).
-4. Revisão jurídica dos termos, da política de privacidade e da página LGPD.
-5. Licença do desenho do braço da logo (a imagem original tem marca d'água de banco de imagens) ou um braço redesenhado.
+2. Domínio com HTTPS (a biometria só funciona com ele) e e-mail com SPF/DKIM configurados.
+3. Revisão jurídica dos termos, da política de privacidade e da página LGPD.
+4. Licença do desenho do braço da logo (a imagem original tem marca d'água de banco de imagens) ou um braço redesenhado.

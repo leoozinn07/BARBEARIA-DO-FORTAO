@@ -192,10 +192,10 @@ function lembretesIniciais(inicio, agora = Date.now()) {
 /**
  * Marca um horário.
  * cliente: { id, nome, telefone } de um usuário logado, ou avulso: { nome, telefone } (só o admin).
- * adicionais: slugs dos serviços adicionais. whatsapp: manda confirmação e lembretes no WhatsApp do telefone.
+ * adicionais: slugs dos serviços adicionais.
  */
 export async function criarAgendamento({
-  cliente = null, avulso = null, slug, adicionais: adicionaisSlugs = [], inicio: inicioISO, origem = 'site', observacao = null, whatsapp = false,
+  cliente = null, avulso = null, slug, adicionais: adicionaisSlugs = [], inicio: inicioISO, origem = 'site', observacao = null,
 }) {
   const { agenda: regras } = await lerConfiguracoes();
   const inicio = new Date(inicioISO);
@@ -228,10 +228,10 @@ export async function criarAgendamento({
       try {
         const r = await consulta(
           `INSERT INTO agendamentos (codigo, cliente_id, cliente_nome, cliente_telefone, barbeiro_id, servico_id, servico_nome,
-             preco_centavos, duracao_min, inicio, fim, origem, observacao, whatsapp_lembrete, lembrete_24h_em, lembrete_2h_em)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             preco_centavos, duracao_min, inicio, fim, origem, observacao, lembrete_24h_em, lembrete_2h_em)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [gerarCodigo(), cliente?.id ?? null, nome, telefone, barbeiroId, pacote.servico.id, pacote.nome, pacote.preco_centavos,
-            pacote.duracao_min, inicio, fim, origem, observacao, whatsapp && telefone ? 1 : 0, l24, l2],
+            pacote.duracao_min, inicio, fim, origem, observacao, l24, l2],
           conn,
         );
         id = r.insertId;
@@ -263,14 +263,13 @@ function conferirPrazoCliente(ag, regras) {
 }
 
 /**
- * Cancela. Cliente (pelo site ou respondendo "2" no WhatsApp) só até o prazo; o Fortão, a qualquer momento.
- * peloWhatsapp: quem pediu é o dono do telefone do horário (o robô já conferiu), vale também para cliente sem conta.
+ * Cancela. Cliente só até o prazo; o Fortão, a qualquer momento.
  */
-export async function cancelarAgendamento({ codigo, usuario, porAdmin = false, motivo = null, peloWhatsapp = false }) {
+export async function cancelarAgendamento({ codigo, usuario, porAdmin = false, motivo = null }) {
   const { agenda: regras } = await lerConfiguracoes();
   const ag = await transacao(async (conn) => {
     const ag = await buscarAgendamento('a.codigo = ? FOR UPDATE', [codigo], conn);
-    if (!ag || (!porAdmin && !peloWhatsapp && ag.cliente_id !== usuario.id)) throw erros.naoEncontrado('Horário não encontrado.');
+    if (!ag || (!porAdmin && ag.cliente_id !== usuario.id)) throw erros.naoEncontrado('Horário não encontrado.');
     if (porAdmin) {
       if (ag.status !== 'confirmado') throw erros.conflito('Só dá para cancelar horários confirmados.', 'status_invalido');
     } else {
@@ -282,7 +281,7 @@ export async function cancelarAgendamento({ codigo, usuario, porAdmin = false, m
       conn,
     );
     const atualizado = await buscarAgendamento('a.id = ?', [ag.id], conn);
-    await eventos.aoCancelar(conn, atualizado, { porAdmin, motivo, peloWhatsapp });
+    await eventos.aoCancelar(conn, atualizado, { porAdmin, motivo });
     return atualizado;
   });
   eventos.entregarAgora();
@@ -315,7 +314,7 @@ export async function remarcarAgendamento({ codigo, usuario, inicio: inicioISO, 
     await garantirHorarioLivre(conn, { barbeiroId, servico, inicio: novoInicio, ignorarId: ag.id, semAntecedencia: porAdmin });
     const fim = new Date(novoInicio.getTime() + ag.duracao_min * MIN);
     const { l24, l2 } = lembretesIniciais(novoInicio);
-    await consulta('UPDATE agendamentos SET inicio = ?, fim = ?, lembrete_24h_em = ?, lembrete_2h_em = ?, presenca_confirmada_em = NULL WHERE id = ?', [novoInicio, fim, l24, l2, ag.id], conn);
+    await consulta('UPDATE agendamentos SET inicio = ?, fim = ?, lembrete_24h_em = ?, lembrete_2h_em = ? WHERE id = ?', [novoInicio, fim, l24, l2, ag.id], conn);
     const atualizado = await buscarAgendamento('a.id = ?', [ag.id], conn);
     await eventos.aoRemarcar(conn, atualizado, new Date(ag.inicio));
     return atualizado;
@@ -372,8 +371,6 @@ export function paraCliente(ag, regras) {
     motivo_cancelamento: ag.motivo_cancelamento,
     adicionais: ag.adicionais ?? [],
     telefone: ag.cliente_telefone ?? null,
-    whatsapp_lembrete: Boolean(ag.whatsapp_lembrete),
-    presenca_confirmada: Boolean(ag.presenca_confirmada_em),
     pode_alterar: podeAlterar,
   };
 }

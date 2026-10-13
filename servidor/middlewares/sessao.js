@@ -18,7 +18,7 @@ export async function carregarSessao(req, res, next) {
   if (!token || token.length > 100) return next();
   try {
     const linha = await umaLinha(
-      `SELECT s.id AS sessao_id, s.ultimo_uso_em, u.id, u.nome, u.email, u.telefone, u.papel,
+      `SELECT s.id AS sessao_id, s.criado_em AS sessao_criada_em, s.ultimo_uso_em, u.id, u.nome, u.email, u.telefone, u.papel,
               u.email_verificado_em, u.marketing, u.preferencias, u.criado_em
          FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id
         WHERE s.token_hash = ? AND s.expira_em > UTC_TIMESTAMP() AND u.excluido_em IS NULL`,
@@ -28,9 +28,9 @@ export async function carregarSessao(req, res, next) {
       res.clearCookie(config.sessao.cookie, { path: '/' });
       return next();
     }
-    const { sessao_id: sessaoId, ultimo_uso_em: ultimoUso, ...usuario } = linha;
+    const { sessao_id: sessaoId, sessao_criada_em: criadaEm, ultimo_uso_em: ultimoUso, ...usuario } = linha;
     req.usuario = usuario;
-    req.sessao = { id: sessaoId };
+    req.sessao = { id: sessaoId, criadaEm: new Date(criadaEm) };
     if (Date.now() - new Date(ultimoUso).getTime() > 3600000) {
       const expira = new Date(Date.now() + config.sessao.diasValidade * DIA);
       await consulta('UPDATE sessoes SET ultimo_uso_em = UTC_TIMESTAMP(), expira_em = ? WHERE id = ?', [expira, sessaoId]);

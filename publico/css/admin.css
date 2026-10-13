@@ -40,6 +40,17 @@ a.resumo__item:active { transform: scale(0.98); }
 .lista-admin { display: grid; gap: 8px; }
 .lista-admin li { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 14px 16px; border-radius: 18px; background: var(--sup); border: 1px solid var(--borda); }
 .lista-admin small { color: var(--texto-2); font-size: 0.8125rem; display: block; }
+.lista-admin__acoes { display: flex; gap: 4px; }
+
+/* Mensagem no WhatsApp: modelos prontos em pílulas */
+.modelos-msg { display: flex; flex-wrap: wrap; gap: 8px; border: 0; padding: 0; margin: 0; }
+.modelos-msg legend { margin-bottom: 8px; font-size: 0.875rem; font-weight: 600; }
+.modelos-msg label { position: relative; cursor: pointer; }
+.modelos-msg input { position: absolute; opacity: 0; }
+.modelos-msg span { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 999px; background: var(--sup-2); font-size: 0.875rem; font-weight: 600; transition: background-color 200ms ease, color 200ms ease; }
+.modelos-msg input:checked + span { background: var(--ativo-bg); color: var(--ativo-fg); box-shadow: inset 0 0 0 1.5px var(--ouro); }
+.modelos-msg input:focus-visible + span { outline: 2px solid var(--foco); outline-offset: 2px; }
+.msg-nota { font-size: 0.8125rem; color: var(--texto-2); }
 .servico-admin { display: grid; gap: 12px; padding: 16px; border-radius: 20px; background: var(--sup); border: 1px solid var(--borda); }
 .servico-admin .duas-colunas { grid-template-columns: 1fr 1fr; }
 .servico-admin__rodape { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }

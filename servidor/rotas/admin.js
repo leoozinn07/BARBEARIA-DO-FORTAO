@@ -2,7 +2,6 @@
 import { Router } from 'express';
 import { consulta, executar, umaLinha, transacao } from '../db/index.js';
 import { smtpConfigurado } from '../emails/fila.js';
-import { whatsappConfigurado } from '../whatsapp/fila.js';
 import { erros } from '../lib/erros.js';
 import * as tempo from '../lib/tempo.js';
 import { campos, validar, z } from '../lib/validacao.js';
@@ -61,7 +60,6 @@ rotasAdmin.get('/resumo', validar(z.object({ data: campos.dataISO.optional() }),
     data: hoje, dia: normalizar(doDia), semana: normalizar(daSemana), mes: normalizar(doMes), clientes: Number(clientes.total),
     // Sem SMTP, os e-mails não saem de verdade: o painel mostra o aviso
     email_real: smtpConfigurado(),
-    whatsapp_real: whatsappConfigurado(),
   });
 }));
 
@@ -205,7 +203,6 @@ const esquemaNovo = z.object({
   servico: campos.slug,
   adicionais: campos.adicionais,
   inicio: campos.instante,
-  whatsapp: z.boolean().optional().default(false),
   email_cliente: campos.email.optional(),
   nome: campos.nome.optional(),
   telefone: campos.telefone,
@@ -227,7 +224,6 @@ rotasAdmin.post('/agendamentos', validar(esquemaNovo), rota(async (req, res) => 
     inicio: d.inicio,
     origem: 'admin',
     observacao: d.observacao || null,
-    whatsapp: d.whatsapp,
   });
   await anexarAdicionais([ag]);
   await registrar(req, 'admin_criou_agendamento', ag.codigo);

@@ -88,6 +88,18 @@ export function senhaAlterada({ nome }) {
   };
 }
 
+export function biometriaAtivada({ nome, aparelho = 'aparelho' }) {
+  return {
+    assunto: 'Biometria ativada na sua conta',
+    html: layout({ titulo: 'Biometria ativada', previa: 'Aviso de segurança da sua conta.', corpo:
+      p(`Oi, ${esc(primeiroNome(nome))}. A partir de agora você também entra na sua conta com a biometria do ${esc(aparelho)} (digital, rosto ou PIN).`) +
+      p('A biometria fica só no seu aparelho; o site guarda apenas uma chave pública. Para desligar, vá em Minha conta > Perfil > Biometria.') +
+      p('Se não foi você, troque a senha e remova o aparelho no perfil.') +
+      botao('Abrir minha conta', `${config.appUrl}/conta#perfil`) }),
+    texto: `Oi, ${primeiroNome(nome)}. A biometria do ${aparelho} foi ativada na sua conta. Se não foi você, troque a senha e remova o aparelho em ${config.appUrl}/conta#perfil`,
+  };
+}
+
 export function agendamentoConfirmado({ nome, servico, quando, valor, endereco, codigo }) {
   return {
     assunto: `Horário confirmado: ${quando}`,

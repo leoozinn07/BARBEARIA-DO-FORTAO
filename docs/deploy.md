@@ -1,6 +1,6 @@
 # Colocar o site no ar
 
-O jeito mais simples: um servidor VPS com Docker. O `docker-compose.yml` sobe o MySQL, o site e o Caddy, que cuida do HTTPS sozinho. O site precisa ficar ligado o tempo todo: é ele que manda os lembretes e entrega os e-mails.
+O jeito mais simples: um servidor VPS com Docker. O `docker-compose.yml` sobe o MySQL, o site e o Caddy, que cuida do HTTPS sozinho. O site precisa ficar ligado o tempo todo: é ele que manda os lembretes e entrega os e-mails. O Caddy também manda quem digitar `www.` para o domínio principal: a sessão e a biometria ficam presas a um endereço só.
 
 ## 1. O que você precisa
 
@@ -8,7 +8,7 @@ O jeito mais simples: um servidor VPS com Docker. O `docker-compose.yml` sobe o 
 | --- | --- | --- |
 | Domínio | registro.br (`barbeariadofortao.com.br`) | R$ 40 por ano |
 | Servidor | VPS com 2 GB de RAM (Hostinger, Contabo, DigitalOcean, Magalu Cloud) | R$ 30 a R$ 60 por mês |
-| E-mail de envio | Brevo (300 e-mails por dia grátis) ou Resend | grátis no começo |
+| E-mail de envio (confirmação e lembretes) | Brevo (300 e-mails por dia grátis) ou Resend | grátis |
 
 ## 2. Domínio
 
@@ -47,9 +47,10 @@ O comando mostra a senha gerada uma única vez. Entre em `https://seu-dominio/en
 
 Enquanto o SMTP não estiver configurado, o painel mostra um aviso e os avisos aparecem só no sino do site.
 
-## 5. WhatsApp
+## 5. Biometria e WhatsApp
 
-Confirmação, lembretes e o robô que responde 1 e 2 usam a API oficial do WhatsApp. O passo a passo (conta Meta, número, modelos e webhook) está em [whatsapp.md](whatsapp.md). Sem isso, o site funciona e o painel avisa que o WhatsApp ainda não está ligado.
+- **Biometria (passkeys):** não precisa configurar nada. Só funciona com HTTPS e fica presa ao domínio do `APP_URL`: se um dia o site mudar de domínio, cada cliente precisa ativar a biometria de novo (a senha continua valendo).
+- **WhatsApp:** não há robô nem conta na Meta. O Fortão manda as mensagens do próprio WhatsApp, pelos botões **Mensagem** e **Salvar contato** do painel. Coloque o número da barbearia em Painel > Barbearia para o botão de WhatsApp do site.
 
 ## 6. Segurança do banco
 

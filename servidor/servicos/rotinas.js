@@ -3,9 +3,9 @@
 import { config } from '../config.js';
 import { consulta, executar, transacao } from '../db/index.js';
 import { processarFila } from '../emails/fila.js';
-import { processarFilaWhatsapp } from '../whatsapp/fila.js';
 import { log } from '../lib/log.js';
 import { buscarAgendamento } from './agenda.js';
+import { limparDesafios } from './biometria.js';
 import * as eventos from './eventos.js';
 
 const HORA = 3600000;
@@ -55,8 +55,7 @@ export async function limpar() {
   await executar('DELETE FROM notificacoes WHERE criado_em < UTC_TIMESTAMP() - INTERVAL 180 DAY');
   await executar('DELETE FROM emails_saida WHERE (enviado_em IS NOT NULL OR tentativas >= 6) AND criado_em < UTC_TIMESTAMP() - INTERVAL 30 DAY');
   await executar('DELETE FROM agenda_travas WHERE dia < UTC_DATE() - INTERVAL 2 DAY');
-  await executar('DELETE FROM whatsapp_saida WHERE (enviado_em IS NOT NULL OR tentativas >= 6) AND criado_em < UTC_TIMESTAMP() - INTERVAL 30 DAY');
-  await executar('DELETE FROM whatsapp_recebidas WHERE recebida_em < UTC_TIMESTAMP() - INTERVAL 30 DAY');
+  await limparDesafios();
 }
 
 const timers = [];
@@ -65,12 +64,10 @@ export function iniciarRotinas() {
   const seguro = (nome, fn) => () => fn().catch((e) => log.erro(`rotina_${nome}`, { erro: e.message }));
   timers.push(setInterval(seguro('lembretes', processarLembretes), 60000));
   timers.push(setInterval(seguro('emails', processarFila), 15000));
-  timers.push(setInterval(seguro('whatsapp', processarFilaWhatsapp), 15000));
   timers.push(setInterval(seguro('concluir', concluirPassados), 10 * 60000));
   timers.push(setInterval(seguro('limpeza', limpar), 6 * HORA));
   timers.forEach((t) => t.unref());
   seguro('emails', processarFila)();
-  seguro('whatsapp', processarFilaWhatsapp)();
   seguro('lembretes', processarLembretes)();
   seguro('concluir', concluirPassados)();
   log.info('rotinas_iniciadas');

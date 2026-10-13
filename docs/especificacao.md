@@ -1,6 +1,6 @@
 # Especificação: site da Barbearia do Fortão
 
-Versão de 13/10/2026. Antes era site + app Android; agora é só o site, hospedado, com Node e MySQL.
+Versão de 13/10/2026 (revisão: sem robô do WhatsApp, com biometria). Antes era site + app Android; agora é só o site, hospedado, com Node e MySQL.
 Base visual: opção C ("Cadeira") com a logo da opção A, preto e cinza, dourado só em detalhes.
 
 ## 1. Objetivo
@@ -23,7 +23,10 @@ Sucesso é: cliente marca em poucos toques, não esquece o horário, o Fortão n
 | Tudo funcional, sem "testes" | Sem dados de exemplo e sem suíte de testes no repositório. O fluxo foi conferido à mão num MySQL local |
 | Catálogo (13/10) | Corte navalhado, Corte normal, Corte + sobrancelha, Corte + sobrancelha + barba, Corte + barba; adicionais Luzes, Boyzão e Progressiva. Preços e tempos iniciais são suposição, editáveis no painel |
 | Confirmação antes de marcar | Folha "Tem certeza e consciência de que esse será o horário agendado?" com Sim / Não |
-| Telefone para lembrete no WhatsApp | Mini formulário obrigatório na confirmação; robô responde 1 (confirmar presença) e 2 (cancelar) |
+| Sem robô do WhatsApp (13/10) | O cliente informa o celular no mini formulário da confirmação (obrigatório). O Fortão fala com ele pelo próprio WhatsApp: no painel, botão Mensagem (texto pronto em link wa.me) e Salvar contato (.vcf) |
+| Lembretes por e-mail, de graça | Confirmação, 1 dia antes, 2 horas antes, remarcação e cancelamento, por SMTP (Brevo grátis) e no sino do site |
+| Termos e privacidade no site | Rodapé de todas as páginas, cadastro, tela de entrar e folha de confirmação; textos revistos para e-mail, WhatsApp manual e biometria |
+| Entrar com biometria | Passkeys (WebAuthn): o cliente com conta ativa no perfil e entra com digital, rosto ou PIN |
 | Lembrete logo depois de marcar | Agenda do celular (.ics) e Google Agenda na folha de sucesso e no cartão do horário |
 | Botão claro/escuro | No topo de todas as páginas; fica guardado no aparelho e na conta |
 | Fechado domingo e segunda; cancelar até 2 h antes | Horário de funcionamento e prazo iniciais, editáveis no painel |
@@ -64,13 +67,13 @@ Node 22 + Express 5 ──► MySQL 8
 | `agendamento_adicionais` | Adicionais de cada horário, com nome e preço do momento da marcação |
 | `notificacoes` | Avisos do sino |
 | `emails_saida` | Fila de e-mails |
-| `whatsapp_saida` | Fila do WhatsApp (modelos aprovados e respostas do robô) |
-| `whatsapp_recebidas` | Mensagens recebidas já tratadas (a Meta pode reenviar a mesma) |
+| `biometria_credenciais` | Uma linha por aparelho com biometria: id da credencial, chave pública, contador, tipo de aparelho, datas |
+| `biometria_desafios` | Desafios de uso único da biometria (só o hash, valem 5 min) |
 | `configuracoes` | Endereço, contatos, regras da agenda (JSON) |
 | `auditoria` | Ações do admin e eventos de segurança |
 | `migracoes` | Quais arquivos de `servidor/db/migracoes/` já rodaram |
 
-A migração `002_site.sql` tira a tabela de inscrições de notificação push e troca a origem "app" por "site". A `003_catalogo_whatsapp.sql` cria o tipo de serviço (principal ou adicional), o catálogo novo, os adicionais por horário e as filas do WhatsApp. As duas rodam sozinhas em bancos que já tinham a versão anterior.
+A migração `002_site.sql` tira a tabela de inscrições de notificação push e troca a origem "app" por "site". A `003_catalogo_whatsapp.sql` cria o tipo de serviço (principal ou adicional), o catálogo novo, os adicionais por horário e as filas do WhatsApp. A `004_biometria_sem_robo.sql` apaga as filas e as colunas do robô e cria as tabelas da biometria e o identificador aleatório da conta (`usuarios.biometria_id`). Todas rodam sozinhas em bancos que já tinham a versão anterior.
 
 **Sem horário duplicado:** ao marcar ou remarcar, a transação trava a linha do dia em `agenda_travas`, confere sobreposição com horários e folgas e só então grava. Dois pedidos simultâneos para o mesmo horário: um entra, o outro recebe "esse horário acabou de ser ocupado".
 
@@ -98,32 +101,35 @@ A migração `002_site.sql` tira a tabela de inscrições de notificação push 
 - Helmet com CSP sem script inline, HSTS em produção.
 - Entrada validada com Zod; SQL só com parâmetros; front sem `innerHTML` com dado do usuário.
 - No Docker, o MySQL fica numa rede interna, sem porta aberta para a internet; o site usa um usuário com acesso só ao banco `fortao`.
+- Biometria com `@simplewebauthn/server`: verificação do usuário obrigatória (digital, rosto ou PIN), origem e domínio conferidos, desafio de uso único guardado só como hash, contador conferido a cada entrada. Ativar pede a senha, a não ser nos 10 min depois de entrar, e manda e-mail de aviso. Entrar sem lista de contas (o aparelho mostra as passkeys deste site).
+- Um domínio só: o Caddy redireciona `www.` para o domínio principal (sessão, CSRF e passkeys dependem da origem).
 
 ## 7. LGPD
 
-- Coleta mínima: nome, e-mail, telefone opcional. Aceite registrado com versão; marketing opcional e separado.
+- Coleta mínima: nome, e-mail, telefone opcional no cadastro e obrigatório ao marcar. Aceite registrado com versão; marketing opcional e separado.
+- Biometria: nenhum dado biométrico chega ao site; só a chave pública, o tipo de aparelho e as datas. Remover o aparelho ou excluir a conta apaga tudo.
 - Só cookies essenciais; fontes e ícones servidos pelo próprio site; mapa do Google só depois do toque.
 - Na conta: baixar os dados (JSON) e excluir a conta (anonimiza, cancela horários futuros, mantém o histórico sem dados pessoais).
 
-## 8. E-mails, WhatsApp e avisos
+## 8. E-mails e avisos
 
-| Evento | E-mail | WhatsApp (se o cliente aceitou) | Aviso no sino |
-| --- | --- | --- | --- |
-| Cadastro | Confirme seu e-mail | Não | Boas-vindas |
-| Esqueci a senha | Link de redefinição (1 h) | Não | Não |
-| Agendamento | Confirmação com valor, endereço e convite (.ics) | Modelo `horario_confirmado` | Sim |
-| Remarcação | Novo horário | Modelo `horario_remarcado` | Sim |
-| Cancelamento | Pelo cliente ou pelo Fortão, com motivo | Modelo `horario_cancelado` | Sim |
-| Lembrete 24 h e 2 h | Sim | Modelo `lembrete_horario` | Sim |
-| Cliente responde 1 ou 2 | Não | Resposta do robô | O Fortão vê "Confirmou" ou o cancelamento |
+| Evento | E-mail | Aviso no sino |
+| --- | --- | --- |
+| Cadastro | Confirme seu e-mail | Boas-vindas |
+| Esqueci a senha | Link de redefinição (1 h) | Não |
+| Agendamento | Confirmação com valor, endereço e convite (.ics) | Sim |
+| Remarcação | Novo horário | Sim |
+| Cancelamento | Pelo cliente ou pelo Fortão, com motivo | Sim |
+| Lembrete 24 h e 2 h | Sim | Sim |
+| Biometria ativada | Aviso de segurança | Sim |
 
-Sem SMTP ou sem WhatsApp configurado, as mensagens ficam em `var/emails/` e `var/whatsapp/` e o painel mostra um aviso.
+Sem SMTP configurado, os e-mails ficam em `var/emails/` e o painel mostra um aviso. WhatsApp só pelo Fortão, manual, com os botões do painel (seção 9).
 
 ## 9. Telas
 
-Cliente: início (agendamento com adicionais), entrar, criar conta, esqueci a senha, redefinir senha, confirmar e-mail, marcar horário (com a confirmação e o mini formulário do WhatsApp), sucesso com lembrete, minha conta (próximo horário, horários, perfil, aparência, senha, privacidade), termos, privacidade, LGPD e 404. Botão de tema claro/escuro no topo.
+Cliente: início (agendamento com adicionais), entrar (com senha ou biometria), criar conta, esqueci a senha, redefinir senha, confirmar e-mail, marcar horário (com a confirmação, o mini formulário do celular e os links de termos e privacidade), sucesso com lembrete, minha conta (próximo horário, horários, perfil, biometria, aparência, senha, privacidade), termos, privacidade, LGPD e 404. Botão de tema claro/escuro no topo.
 
-Fortão: agenda do dia (com o selo de presença confirmada no WhatsApp), resumo, rendimento (com adicionais separados), novo horário (cliente com conta ou do balcão, com adicionais e WhatsApp), concluir, falta, remarcar, cancelar com motivo, folgas, serviços e adicionais, horário de funcionamento, dados da barbearia, clientes.
+Fortão: agenda do dia, resumo, rendimento (com adicionais separados), novo horário (cliente com conta ou do balcão, com adicionais), concluir, falta, remarcar, cancelar com motivo, Mensagem no WhatsApp com texto pronto e Salvar contato (.vcf) em cada horário e cliente, folgas, serviços e adicionais, horário de funcionamento, dados da barbearia, clientes.
 
 ## 10. Fora desta versão
 

@@ -17,12 +17,12 @@ export const campos = {
     .transform((s) => (s === '' ? null : s))
     .optional()
     .nullable(),
-  // Na hora de marcar o WhatsApp é obrigatório: é por ele que vão a confirmação e os lembretes
+  // Na hora de marcar o telefone é obrigatório: é por ele que o Fortão fala com o cliente, se precisar
   telefoneObrigatorio: z
-    .string({ error: 'Informe seu WhatsApp com DDD para receber os lembretes.' })
+    .string({ error: 'Informe seu telefone com DDD.' })
     .trim()
     .transform((s) => s.replace(/\D/g, ''))
-    .refine((s) => /^(55)?\d{10,11}$/.test(s), 'Informe seu WhatsApp com DDD, por exemplo (11) 91234-5678.'),
+    .refine((s) => /^(55)?\d{10,11}$/.test(s), 'Informe seu telefone com DDD, por exemplo (11) 91234-5678.'),
   token: z.string().trim().min(20, 'Link inválido.').max(200, 'Link inválido.'),
   codigo: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{8}$/, 'Código inválido.'),
   dataISO: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida.'),
@@ -45,6 +45,35 @@ export function camposDoErro(erro) {
   }
   return saida;
 }
+
+// Respostas do navegador no cadastro e na entrada com biometria (WebAuthn), tudo em base64url
+const b64url = (max) => z.string().max(max).regex(/^[A-Za-z0-9_-]+$/, 'Resposta inválida.');
+const respostaBiometria = {
+  id: b64url(1400),
+  rawId: b64url(1400),
+  type: z.literal('public-key'),
+  authenticatorAttachment: z.enum(['platform', 'cross-platform']).optional(),
+  clientExtensionResults: z.record(z.string(), z.unknown()).optional().default({}),
+};
+export const esquemasBiometria = {
+  cadastro: z.object({
+    ...respostaBiometria,
+    response: z.object({
+      clientDataJSON: b64url(4096),
+      attestationObject: b64url(16000),
+      transports: z.array(z.string().max(20)).max(8).optional(),
+    }),
+  }),
+  entrada: z.object({
+    ...respostaBiometria,
+    response: z.object({
+      clientDataJSON: b64url(4096),
+      authenticatorData: b64url(4096),
+      signature: b64url(8192),
+      userHandle: b64url(512).nullable().optional().transform((v) => v ?? undefined),
+    }),
+  }),
+};
 
 export function validar(esquema, origem = 'body') {
   return (req, _res, next) => {

@@ -262,14 +262,16 @@ dialog.folha[open]::backdrop { background: rgb(0 0 0 / 0.55); }
 .confirmar__resumo dd { margin: 0; font-weight: 600; }
 .confirmar__pergunta { font-size: 1.0625rem; font-weight: 650; letter-spacing: -0.01em; text-wrap: balance; }
 .confirmar__botoes { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; }
+.confirmar__legal { font-size: 0.8125rem; color: var(--texto-2); margin-top: -4px; }
 
-/* ---------------------------------------------------------------- lembrete (agenda do celular, Google, WhatsApp) */
+/* ---------------------------------------------------------------- lembrete (agenda do celular, Google, e-mail) */
 .lembrete { display: grid; gap: 10px; }
 .lembrete__titulo { font-size: 1rem; font-weight: 650; }
 .lembrete__botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .lembrete__botoes .botao { min-height: 48px; padding: 0 12px; }
-.lembrete__whats { display: flex; gap: 8px; align-items: flex-start; font-size: 0.875rem; color: var(--texto-2); }
-.lembrete__whats i { font-size: 1.15rem; color: var(--ouro); margin-top: 1px; }
+.lembrete__aviso { display: flex; gap: 8px; align-items: flex-start; font-size: 0.875rem; color: var(--texto-2); }
+.lembrete__aviso i { font-size: 1.15rem; color: var(--ouro); margin-top: 1px; flex: none; }
+.lembrete__aviso b { color: var(--texto); font-weight: 600; overflow-wrap: anywhere; }
 
 /* ---------------------------------------------------------------- ícone de sucesso */
 .sucesso__icone { width: 64px; height: 64px; border-radius: 20px; background: var(--ativo-bg); color: var(--ativo-fg); display: grid; place-items: center; font-size: 2.2rem; }

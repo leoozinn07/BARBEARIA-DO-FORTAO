@@ -7,11 +7,12 @@ import { acordarEntregador, enfileirarEmail } from '../emails/fila.js';
 import { ErroApp, erros } from '../lib/erros.js';
 import { log } from '../lib/log.js';
 import { conferirSenha, conferirSenhaFicticia, hashSenha, motivoSenhaFraca } from '../lib/seguranca.js';
-import { campos, validar, z } from '../lib/validacao.js';
+import { campos, esquemasBiometria, validar, z } from '../lib/validacao.js';
 import { garantirTokenCsrf } from '../middlewares/csrf.js';
 import { limites } from '../middlewares/limites.js';
 import { encerrarSessao, encerrarTodas, exigirLogin, iniciarSessao } from '../middlewares/sessao.js';
 import { auditar } from '../servicos/auditoria.js';
+import { concluirEntrada, opcoesEntrada } from '../servicos/biometria.js';
 import { criarAviso } from '../servicos/eventos.js';
 import { consumirToken, criarTokenUsoUnico, rota, usuarioPublico } from './comum.js';
 
@@ -98,6 +99,28 @@ rotasAuth.post('/entrar', limites.entrar, validar(z.object({ email: campos.email
   await iniciarSessao(req, res, u.id);
   const csrf = renovarCsrf(req, res);
   await auditar({ usuarioId: u.id, acao: 'login', ip: req.ip });
+  res.json({ usuario: usuarioPublico(u), csrf });
+}));
+
+// ------------------------------------------------------------------ entrar com biometria
+// Quem já tem conta ativa a biometria no perfil; daí em diante entra com a digital, o rosto ou o PIN do aparelho.
+rotasAuth.post('/biometria/opcoes', limites.biometria, rota(async (_req, res) => {
+  res.set('Cache-Control', 'no-store').json({ opcoes: await opcoesEntrada() });
+}));
+
+rotasAuth.post('/biometria/entrar', limites.entrar, validar(z.object({ resposta: esquemasBiometria.entrada })), rota(async (req, res) => {
+  let usuarioId;
+  try {
+    usuarioId = await concluirEntrada(req.dados.resposta);
+  } catch (e) {
+    await auditar({ acao: 'login_biometria_falhou', ip: req.ip });
+    throw e;
+  }
+  const u = await umaLinha(`SELECT ${COLUNAS_USUARIO} FROM usuarios WHERE id = ?`, [usuarioId]);
+  if (req.sessao) await encerrarSessao(req, res);
+  await iniciarSessao(req, res, u.id);
+  const csrf = renovarCsrf(req, res);
+  await auditar({ usuarioId: u.id, acao: 'login_biometria', ip: req.ip });
   res.json({ usuario: usuarioPublico(u), csrf });
 }));
 

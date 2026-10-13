@@ -20,7 +20,6 @@
       <button class="botao botao--cheio" type="button" data-novo-abrir><i class="ph-bold ph-plus" aria-hidden="true"></i> Novo horário</button>
     </header>
 
-    <p class="alerta" data-aviso-whatsapp hidden><i class="ph ph-whatsapp-logo" aria-hidden="true"></i><span>O WhatsApp ainda não está ligado: confirmações e lembretes estão sendo guardados, mas não saem. O passo a passo está em docs/whatsapp.md.</span></p>
     <p class="alerta" data-aviso-email hidden><i class="ph ph-envelope-simple-open" aria-hidden="true"></i><span>Os e-mails de confirmação e lembrete ainda não estão saindo: falta configurar o envio (SMTP). O passo a passo está no guia de deploy. Até lá, os avisos aparecem só no site.</span></p>
 
     <section class="resumo" aria-label="Resumo" data-resumo>
@@ -217,7 +216,7 @@
       </fieldset>
       <div data-campos-avulso class="pilha">
         <div class="campo"><label for="n-nome">Nome</label><input id="n-nome" name="nome" maxlength="120"><p class="erro-campo" data-erro-de="nome"></p></div>
-        <div class="campo"><label for="n-tel">WhatsApp</label><input id="n-tel" name="telefone" type="tel" inputmode="tel"><p class="erro-campo" data-erro-de="telefone"></p></div>
+        <div class="campo"><label for="n-tel">Celular (WhatsApp)</label><input id="n-tel" name="telefone" type="tel" inputmode="tel"><p class="ajuda">Depois de marcar, o botão Mensagem no horário abre o seu WhatsApp com o aviso pronto.</p><p class="erro-campo" data-erro-de="telefone"></p></div>
       </div>
       <div class="campo" data-campos-conta hidden><label for="n-email">E-mail da conta</label><input id="n-email" name="email_cliente" type="email"><p class="erro-campo" data-erro-de="email_cliente"></p></div>
       <div class="campo"><label for="n-servico">Serviço</label><select id="n-servico" name="servico" data-novo-servico></select></div>
@@ -225,7 +224,6 @@
       <div class="campo"><label for="n-dia">Dia</label><input id="n-dia" name="dia" type="date" data-novo-dia></div>
       <fieldset class="campo"><legend class="rotulo-campo">Horário</legend><div class="ag-periodo__lista" data-novo-horarios></div><p class="erro-campo" data-erro-de="inicio"></p></fieldset>
       <div class="campo"><label for="n-obs">Observação (opcional)</label><input id="n-obs" name="observacao" maxlength="255"></div>
-      <label class="marcar"><input type="checkbox" name="whatsapp" checked><span>Mandar confirmação e lembretes no WhatsApp do cliente</span></label>
       <button class="botao botao--cheio botao--bloco" type="submit">Marcar horário</button>
     </form>
   </dialog>

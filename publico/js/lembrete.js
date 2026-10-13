@@ -1,5 +1,5 @@
-// Lembrete do horário: arquivo de agenda (.ics, abre no app de agenda do celular), Google Agenda e o aviso do WhatsApp.
-import { h, icone, telefoneBonito } from './ui.js';
+// Lembrete do horário: arquivo de agenda (.ics, abre no app de agenda do celular), Google Agenda e o aviso do e-mail.
+import { h, icone } from './ui.js';
 
 const utc = (iso) => new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 
@@ -31,15 +31,14 @@ export function linkGoogleAgenda(ag, config) {
   return `https://calendar.google.com/calendar/render?${p}`;
 }
 
-/** Botões de lembrete + linha do WhatsApp, prontos para colocar numa folha ou num cartão. */
-export function acoesLembrete(ag, config) {
+/** Botões de lembrete + linha do e-mail, prontos para colocar numa folha ou num cartão. */
+export function acoesLembrete(ag, config, email) {
   return h('div', { class: 'lembrete' },
     h('div', { class: 'lembrete__botoes' },
       h('a', { class: 'botao botao--suave', href: linkAgendaCelular(ag, config), download: `fortao-${ag.codigo}.ics` }, icone('calendar-plus'), 'Agenda do celular'),
       h('a', { class: 'botao botao--suave', href: linkGoogleAgenda(ag, config), target: '_blank', rel: 'noopener' }, icone('google-logo'), 'Google Agenda'),
     ),
-    ag.whatsapp_lembrete && ag.telefone
-      ? h('p', { class: 'lembrete__whats' }, icone('whatsapp-logo'), `Lembrete no WhatsApp ${telefoneBonito(ag.telefone.replace(/^55(?=\d{10,11}$)/, ''))}: 1 dia antes e 2 horas antes.`)
-      : null,
+    h('p', { class: 'lembrete__aviso' }, icone('envelope-simple'),
+      h('span', {}, 'Lembrete por e-mail', email ? [' em ', h('b', {}, email)] : '', ': 1 dia antes e 2 horas antes.')),
   );
 }

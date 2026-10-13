@@ -1,4 +1,4 @@
-// Confirmação antes de marcar ("Tem certeza e consciência...?") com o mini formulário do WhatsApp,
+// Confirmação antes de marcar ("Tem certeza e consciência...?") com o mini formulário do telefone,
 // e a folha de sucesso com os lembretes. As duas folhas são montadas aqui para servir à página inicial e a /agendar.
 import { invalidarSessao, post } from './api.js';
 import { esquecerEscolha, pacote } from './agendamento.js';
@@ -16,11 +16,11 @@ const digitos = (t) => String(t || '').replace(/\D/g, '');
 const telefoneValido = (t) => /^(55)?\d{10,11}$/.test(digitos(t));
 
 /**
- * Pergunta se o cliente tem certeza do horário e pede o WhatsApp.
- * enviar({ telefone, whatsapp }) marca de verdade. Resolve com o que enviar devolver, ou null se ele desistir.
+ * Pergunta se o cliente tem certeza do horário e pede o telefone (a barbearia usa para falar com ele, se precisar).
+ * enviar({ telefone }) marca de verdade. Resolve com o que enviar devolver, ou null se ele desistir.
  * Se o horário foi ocupado enquanto isso, fecha e rejeita: o componente atualiza a grade.
  */
-export function confirmarHorario({ nome, inicio, precoCentavos, duracaoMin, telefone, enviar }) {
+export function confirmarHorario({ nome, inicio, precoCentavos, duracaoMin, telefone, email, enviar }) {
   return new Promise((resolver, rejeitar) => {
     const form = h('form', { class: 'folha__corpo confirmar', novalidate: true },
       h('h2', { class: 'titulo', id: 'confirmar-titulo' }, 'Confere antes de marcar'),
@@ -32,13 +32,17 @@ export function confirmarHorario({ nome, inicio, precoCentavos, duracaoMin, tele
       ),
       h('p', { class: 'alerta alerta--erro', 'data-erro-geral': '', role: 'alert', tabindex: '-1', hidden: true }),
       h('div', { class: 'campo' },
-        h('label', { for: 'confirmar-telefone' }, 'Seu WhatsApp com DDD'),
-        h('input', { id: 'confirmar-telefone', name: 'telefone', type: 'tel', inputmode: 'tel', autocomplete: 'tel', required: true, placeholder: '(11) 91234-5678', value: telefoneBonito(digitos(telefone).replace(/^55(?=\d{10,11}$)/, '')), 'aria-describedby': 'confirmar-telefone-erro' }),
+        h('label', { for: 'confirmar-telefone' }, 'Seu celular (WhatsApp) com DDD'),
+        h('input', { id: 'confirmar-telefone', name: 'telefone', type: 'tel', inputmode: 'tel', autocomplete: 'tel', required: true, placeholder: '(11) 91234-5678', value: telefoneBonito(digitos(telefone).replace(/^55(?=\d{10,11}$)/, '')), 'aria-describedby': 'confirmar-telefone-dica confirmar-telefone-erro' }),
+        h('p', { class: 'ajuda', id: 'confirmar-telefone-dica' }, 'Só para a barbearia falar com você sobre o horário, se precisar.'),
         h('p', { class: 'erro-campo', id: 'confirmar-telefone-erro', 'data-erro-de': 'telefone' }),
       ),
-      h('label', { class: 'marcar' }, h('input', { type: 'checkbox', name: 'whatsapp', checked: true }),
-        h('span', {}, 'Quero receber a confirmação e os lembretes neste WhatsApp (1 dia antes e 2 horas antes).')),
+      h('p', { class: 'lembrete__aviso' }, icone('envelope-simple'),
+        h('span', {}, 'Confirmação e lembretes no seu e-mail', email ? [' ', h('b', {}, email)] : '', ': 1 dia antes e 2 horas antes.')),
       h('p', { class: 'confirmar__pergunta' }, 'Tem certeza e consciência de que esse será o horário agendado?'),
+      h('p', { class: 'confirmar__legal' }, 'Ao confirmar, você concorda com os ',
+        h('a', { class: 'link', href: '/termos', target: '_blank' }, 'Termos de uso'), ' e a ',
+        h('a', { class: 'link', href: '/privacidade', target: '_blank' }, 'Política de privacidade'), '.'),
       h('div', { class: 'confirmar__botoes' },
         h('button', { class: 'botao botao--linha', type: 'button', 'data-nao': '' }, 'Não, voltar'),
         h('button', { class: 'botao botao--cheio', type: 'submit' }, icone('check'), 'Sim, confirmar'),
@@ -56,13 +60,13 @@ export function confirmarHorario({ nome, inicio, precoCentavos, duracaoMin, tele
       limparErros(form);
       const tel = form.elements.telefone.value;
       if (!telefoneValido(tel)) {
-        mostrarErros(form, { message: 'Confira o número.', campos: { telefone: 'Informe o WhatsApp com DDD, por exemplo (11) 91234-5678.' } });
+        mostrarErros(form, { message: 'Confira o número.', campos: { telefone: 'Informe o celular com DDD, por exemplo (11) 91234-5678.' } });
         return;
       }
       const botao = form.querySelector('[type="submit"]');
       ocupado(botao, true);
       try {
-        const resultado = await enviar({ telefone: digitos(tel), whatsapp: form.elements.whatsapp.checked });
+        const resultado = await enviar({ telefone: digitos(tel) });
         fim(() => resolver(resultado));
       } catch (e) {
         if (e.codigo === 'horario_ocupado' || e.codigo === 'limite_horarios') fim(() => rejeitar(e));
@@ -77,13 +81,13 @@ export function confirmarHorario({ nome, inicio, precoCentavos, duracaoMin, tele
 }
 
 /** "Fechou! Horário marcado." com os botões de lembrete. aoFechar roda quando a folha fecha. */
-export function mostrarSucesso(ag, config, aoFechar) {
+export function mostrarSucesso(ag, config, aoFechar, email) {
   const d = folha(h('div', { class: 'folha__corpo' },
     h('div', { class: 'sucesso__icone' }, icone('check-circle', 'ph-fill')),
     h('h2', { class: 'titulo', id: 'sucesso-titulo' }, 'Fechou! Horário marcado.'),
     h('p', { class: 'subtitulo' }, `${ag.servico}, ${quando(ag.inicio)}. Valor: ${reais(ag.preco_centavos)}, pago na barbearia.`),
     h('h3', { class: 'lembrete__titulo' }, 'Adicionar lembrete'),
-    acoesLembrete(ag, config),
+    acoesLembrete(ag, config, email),
     h('a', { class: 'botao botao--cheio botao--bloco', href: '/conta#horarios' }, 'Ver meus horários'),
   ));
   d.setAttribute('aria-labelledby', 'sucesso-titulo');
@@ -100,14 +104,15 @@ export async function marcarComConfirmacao({ servico, adicionais = [], inicio, u
     precoCentavos: p.preco_centavos,
     duracaoMin: p.duracao_min,
     telefone: usuario.telefone,
-    enviar: async ({ telefone, whatsapp }) => (await post('/agendamentos', {
-      servico: servico.slug, adicionais: adicionais.map((a) => a.slug), inicio, telefone, whatsapp,
+    email: usuario.email,
+    enviar: async ({ telefone }) => (await post('/agendamentos', {
+      servico: servico.slug, adicionais: adicionais.map((a) => a.slug), inicio, telefone,
     })).agendamento,
   });
   if (!agendamento) return null;
   usuario.telefone = agendamento.telefone;
   invalidarSessao();
   esquecerEscolha();
-  mostrarSucesso(agendamento, config, aoFechar);
+  mostrarSucesso(agendamento, config, aoFechar, usuario.email);
   return agendamento;
 }

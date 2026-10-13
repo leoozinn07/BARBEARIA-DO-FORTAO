@@ -8,6 +8,11 @@
 .auth__caixa { display: grid; gap: 20px; width: 100%; max-width: 440px; }
 .auth__caixa form { display: grid; gap: 16px; }
 .auth__troca { color: var(--texto-2); }
+.auth__legal { color: var(--texto-2); font-size: 0.8125rem; }
+.biometria-entrar { display: grid; gap: 12px; }
+.biometria-entrar .ajuda { font-size: 0.8125rem; color: var(--texto-2); text-align: center; text-wrap: balance; }
+.separador { display: flex; align-items: center; gap: 12px; color: var(--texto-2); font-size: 0.8125rem; }
+.separador::before, .separador::after { content: ''; flex: 1; height: 1px; background: var(--borda); }
 .auth__marca { width: 56px; }
 .forca { display: flex; gap: 4px; }
 .forca span { flex: 1; height: 4px; border-radius: 4px; background: var(--sup-3); transition: background-color 200ms ease; }
@@ -45,6 +50,16 @@
 .historico .selo { grid-row: 1 / span 2; grid-column: 2; align-self: center; }
 .grupo-form { display: grid; gap: 16px; padding: 20px; border-radius: var(--raio); background: var(--sup); border: 1px solid var(--borda); }
 .grupo-form h2 { font-size: 1.125rem; font-weight: 650; letter-spacing: -0.02em; }
+
+/* Aparelhos com biometria ativada */
+.aparelhos { display: grid; gap: 8px; }
+.aparelhos li { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 10px 6px 10px 14px; border-radius: var(--raio-campo); background: var(--sup-2); }
+.aparelhos li > i { font-size: 1.4rem; color: var(--ouro); }
+.aparelhos b { display: block; font-weight: 600; }
+.aparelhos small { display: block; color: var(--texto-2); font-size: 0.8125rem; }
+.alerta__acoes { display: inline-flex; flex-wrap: wrap; gap: 4px 16px; margin-left: 4px; }
+.link--suave { color: var(--texto-2); }
+.alerta--sugestao i { color: var(--ouro); }
 .opcoes-tema { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .opcoes-tema label { position: relative; cursor: pointer; }
 .opcoes-tema input { position: absolute; opacity: 0; }

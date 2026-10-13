@@ -17,5 +17,6 @@ export const limites = {
   entrar: limitador({ janelaMin: 15, max: 10, mensagem: 'Muitas tentativas de entrar. Espere 15 minutos.' }),
   cadastro: limitador({ janelaMin: 60, max: 8, mensagem: 'Muitos cadastros deste aparelho. Tente mais tarde.' }),
   senha: limitador({ janelaMin: 60, max: 6, mensagem: 'Muitos pedidos de senha. Tente mais tarde.' }),
+  biometria: limitador({ janelaMin: 15, max: 30, mensagem: 'Muitas tentativas com a biometria. Espere 15 minutos.' }),
   agendar: limitador({ janelaMin: 60, max: 20, mensagem: 'Muitos agendamentos em pouco tempo. Fale com a barbearia.' }),
 };

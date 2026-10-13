@@ -2,6 +2,7 @@
 import { invalidarSessao, post } from './api.js';
 import { iniciarCasca } from './casca.js';
 import { lerEscolhaGuardada } from './agendamento.js';
+import { entrarComBiometria, erroDaBiometria, temSuporte } from './biometria.js';
 import { destinoSeguro, h, icone, ligarVerSenha, limparErros, mostrarErros, ocupado } from './ui.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -54,6 +55,27 @@ async function enviar(fn) {
   } finally {
     ocupado(botao, false);
   }
+}
+
+// Entrar com biometria: só aparece em navegador que sabe usar passkeys
+const blocoBiometria = $('[data-biometria-entrar]');
+if (blocoBiometria && temSuporte()) {
+  blocoBiometria.hidden = false;
+  const botao = $('[data-entrar-biometria]');
+  botao.addEventListener('click', async () => {
+    limparErros(form);
+    ocupado(botao, true);
+    try {
+      const { usuario: u } = await entrarComBiometria();
+      invalidarSessao();
+      location.replace(destino(u));
+    } catch (e) {
+      const erro = erroDaBiometria(e);
+      if (!erro.cancelado) mostrarErros(form, erro);
+    } finally {
+      ocupado(botao, false);
+    }
+  });
 }
 
 form?.addEventListener('submit', (ev) => {

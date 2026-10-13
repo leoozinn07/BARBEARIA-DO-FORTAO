@@ -21,6 +21,12 @@
       <span>Confirme seu e-mail para receber as confirmações e os lembretes. <button class="link" type="button" data-reenviar>Reenviar e-mail</button></span>
     </div>
 
+    <div class="alerta alerta--sugestao" data-sugerir-biometria hidden>
+      <i class="ph ph-fingerprint" aria-hidden="true"></i>
+      <span>Da próxima vez, entre com a digital ou o rosto, sem digitar a senha.
+        <span class="alerta__acoes"><button class="link" type="button" data-sugestao-ativar>Ativar agora</button><button class="link link--suave" type="button" data-sugestao-fechar>Agora não</button></span></span>
+    </div>
+
     <nav class="segmentos" aria-label="Seções da conta">
       <a href="#horarios" data-segmento="horarios">Horários</a>
       <a href="#perfil" data-segmento="perfil">Perfil</a>
@@ -53,8 +59,9 @@
           <p class="erro-campo" id="nome-erro" data-erro-de="nome"></p>
         </div>
         <div class="campo">
-          <label for="telefone">WhatsApp (para a confirmação e os lembretes)</label>
-          <input id="telefone" name="telefone" type="tel" inputmode="tel" autocomplete="tel" aria-describedby="telefone-erro">
+          <label for="telefone">Celular (WhatsApp)</label>
+          <input id="telefone" name="telefone" type="tel" inputmode="tel" autocomplete="tel" aria-describedby="telefone-ajuda telefone-erro">
+          <p class="ajuda" id="telefone-ajuda">Só para a barbearia falar com você sobre o horário. Confirmação e lembretes chegam no e-mail.</p>
           <p class="erro-campo" id="telefone-erro" data-erro-de="telefone"></p>
         </div>
         <label class="marcar"><input type="checkbox" name="marketing"><span>Quero receber novidades e promoções por e-mail.</span></label>
@@ -87,6 +94,14 @@
         </div>
         <button class="botao botao--suave" type="submit">Trocar senha</button>
       </form>
+
+      <section class="grupo-form" aria-labelledby="biometria-titulo">
+        <h2 id="biometria-titulo">Entrar com biometria</h2>
+        <p class="subtitulo">Use a digital, o rosto ou o PIN do aparelho no lugar da senha. A biometria fica só no aparelho: o site guarda uma chave pública, que não serve para mais nada.</p>
+        <ul class="aparelhos" data-aparelhos hidden></ul>
+        <p class="alerta" data-biometria-sem-suporte hidden><i class="ph ph-info" aria-hidden="true"></i><span>Este navegador não tem suporte a biometria. Use o Chrome, o Safari ou o Edge atualizados.</span></p>
+        <button class="botao botao--suave" type="button" data-biometria-ativar><i class="ph ph-fingerprint" aria-hidden="true"></i> Ativar neste aparelho</button>
+      </section>
 
       <button class="botao botao--linha botao--bloco" type="button" data-sair><i class="ph ph-sign-out" aria-hidden="true"></i> Sair da conta</button>
     </section>
@@ -158,6 +173,22 @@
       </div>
       <button class="botao botao--perigo botao--bloco" type="submit">Excluir para sempre</button>
       <button class="botao botao--suave botao--bloco" type="button" data-fechar>Voltar</button>
+    </form>
+  </dialog>
+
+  <!-- Confirmar a senha antes de ativar a biometria -->
+  <dialog class="folha" data-folha-biometria aria-labelledby="biometria-folha-titulo">
+    <div class="folha__alca" aria-hidden="true"></div>
+    <form class="folha__corpo" data-form-biometria novalidate>
+      <div class="folha__topo"><h2 id="biometria-folha-titulo">Confirme sua senha</h2><button class="icone-botao" type="button" data-fechar aria-label="Fechar"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+      <p class="subtitulo">Por segurança, confirme a senha antes de ligar a biometria neste aparelho.</p>
+      <p class="alerta alerta--erro" data-erro-geral role="alert" tabindex="-1" hidden></p>
+      <div class="campo">
+        <label for="senha_biometria">Senha</label>
+        <div class="senha-caixa"><input id="senha_biometria" name="senha" type="password" autocomplete="current-password" aria-describedby="senha_biometria-erro"><button type="button" data-ver-senha aria-label="Mostrar senha" aria-pressed="false"><i class="ph ph-eye" aria-hidden="true"></i></button></div>
+        <p class="erro-campo" id="senha_biometria-erro" data-erro-de="senha"></p>
+      </div>
+      <button class="botao botao--cheio botao--bloco" type="submit"><i class="ph ph-fingerprint" aria-hidden="true"></i> Continuar</button>
     </form>
   </dialog>
 </body>
