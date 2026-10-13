@@ -295,6 +295,39 @@ dialog.folha[open]::backdrop { background: rgb(0 0 0 / 0.55); }
 @keyframes ouro-sai { from { outline-color: var(--ouro); } to { outline-color: transparent; } }
 :where(.botao, .icone-botao, .aba, .ag-servico, .ag-dia, .ag-hora, .cartao, .horario, .item-agenda, .resumo__item):active { outline: 2px solid var(--ouro); outline-offset: 2px; }
 
+/* ---------------------------------------------------------------- boas-vindas (depois de criar a conta ou entrar)
+   Camada escura nos dois temas, como a abertura de um filme: o braço aparece, as palavras sobem uma a uma,
+   o nome chega por último com um brilho dourado e um traço que se desenha embaixo. Um toque pula. */
+.boas-vindas { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 24px; cursor: pointer; text-align: center; color: #f2f2f3;
+  background: radial-gradient(120% 80% at 50% 40%, rgb(28 28 31 / 0.94), rgb(6 6 7 / 0.97)); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  animation: bv-entra 380ms ease both; }
+.boas-vindas.saindo { animation: bv-sai 440ms ease forwards; }
+.boas-vindas__conteudo { --passo: 90ms; --nome: calc(420ms + var(--n) * var(--passo)); display: grid; justify-items: center; gap: 12px; max-width: 640px; }
+.boas-vindas__marca { width: 64px; height: auto; margin-bottom: 6px; filter: drop-shadow(0 6px 18px rgb(0 0 0 / 0.5)); animation: bv-marca 760ms var(--ease-out) 80ms both; }
+.boas-vindas__frase { font-size: clamp(1.45rem, 6.2vw, 2.5rem); font-weight: 650; letter-spacing: -0.03em; line-height: 1.12; text-wrap: balance; color: #d6d6da; }
+.boas-vindas__palavra { display: inline-block; animation: bv-palavra 640ms var(--ease-out) both; animation-delay: calc(320ms + var(--i) * var(--passo)); }
+.boas-vindas__nome { display: block; max-width: 100%; overflow-wrap: anywhere; font-size: clamp(2.8rem, 14vw, 5.4rem); font-weight: 750; letter-spacing: -0.05em; line-height: 1;
+  animation: bv-nome 820ms var(--ease-out) var(--nome) both; }
+/* Dourado fixo (#d4af37): a camada é escura até no tema claro */
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .boas-vindas__nome { background: linear-gradient(100deg, #f2f2f3 0 42%, #d4af37 50%, #f2f2f3 58% 100%) 100% 0 / 260% 100% no-repeat; -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: bv-nome 820ms var(--ease-out) var(--nome) both, bv-brilho 1300ms ease calc(var(--nome) + 500ms) both; }
+}
+.boas-vindas__linha { width: 112px; height: 3px; border-radius: 3px; background: #d4af37; transform-origin: 50% 50%; animation: bv-linha 700ms var(--ease-out) calc(var(--nome) + 300ms) both; }
+@keyframes bv-entra { from { opacity: 0; } }
+@keyframes bv-sai { to { opacity: 0; visibility: hidden; } }
+@keyframes bv-marca { from { opacity: 0; transform: translateY(14px) scale(0.6) rotate(-14deg); } 60% { transform: translateY(-3px) scale(1.06) rotate(4deg); } }
+@keyframes bv-palavra { from { opacity: 0; transform: translateY(0.55em); filter: blur(8px); } }
+@keyframes bv-nome { from { opacity: 0; transform: translateY(0.25em) scale(0.9); filter: blur(12px); } }
+@keyframes bv-brilho { from { background-position: 100% 0; } to { background-position: 0% 0; } }
+@keyframes bv-linha { from { transform: scaleX(0); opacity: 0; } }
+/* No login, o braço dá uma flexionada depois de aparecer */
+.boas-vindas--login .boas-vindas__marca { animation: bv-marca 760ms var(--ease-out) 80ms both, bv-flexiona 700ms ease-in-out 1500ms both; }
+@keyframes bv-flexiona { 40% { transform: scale(1.14) rotate(-6deg); } 70% { transform: scale(0.98) rotate(2deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .boas-vindas__marca, .boas-vindas__palavra, .boas-vindas__nome, .boas-vindas__linha { animation: none !important; }
+}
+
 /* ---------------------------------------------------------------- revelar */
 .js [data-revelar] { opacity: 0; transform: translateY(14px); transition: opacity 600ms var(--ease-out), transform 600ms var(--ease-out); transition-delay: calc(var(--i, 0) * 60ms); }
 .js [data-revelar].visivel { opacity: 1; transform: none; }

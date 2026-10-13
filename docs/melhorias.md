@@ -18,7 +18,8 @@ Tudo aqui é opcional. Escolha o que entra e em que ordem.
 
 ## Alternativas de visual
 
-- **Fotos de verdade no lugar das ilustrações:** a foto de IA do Figma (barbearia vazia à noite) já foi gerada; falta só liberar o download para colocar no topo do site. Fotos reais da barbearia, sem o Fortão (cadeira, bancada, fachada), também funcionam.
+- **Banner sem o logo do GTA:** o banner usa o "V" e o estilo do GTA V, que são marcas da Rockstar Games. Para um site comercial, o mais seguro é uma versão sem o "V" (o resto da arte pode ficar).
+- **Mais fotos da casa:** fotos reais da barbearia (cadeira, bancada, fachada) podem substituir as ilustrações da tela de entrar e da seção do Fortão.
 - **Mais ou menos dourado:** hoje ele aparece no preço da tabela, no contador de avisos, na escolha marcada, no gráfico e no contorno de toque. Dá para tirar do preço ou levar para o botão principal.
 - **Tema claro como padrão:** hoje o escuro é o padrão e o cliente escolhe o claro no perfil.
 
@@ -54,3 +55,4 @@ Isso precisa de dados reais acumulados. O banco já guarda o histórico no forma
 2. Domínio com HTTPS (a biometria só funciona com ele) e e-mail com SPF/DKIM configurados.
 3. Revisão jurídica dos termos, da política de privacidade e da página LGPD.
 4. Licença do desenho do braço da logo (a imagem original tem marca d'água de banco de imagens) ou um braço redesenhado.
+5. Banner sem o "V" do GTA V (marca da Rockstar Games), para evitar problema de marca no site comercial.

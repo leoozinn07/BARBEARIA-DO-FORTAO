@@ -1,6 +1,6 @@
 // "Casca" comum a todas as páginas: cabeçalho, avisos, abas e rodapé.
 import { carregarSessao, get, patch, post } from './api.js';
-import { h, icone, relativo, revelar } from './ui.js';
+import { h, icone, primeiroNome, relativo, revelar } from './ui.js';
 import './ouro.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -147,6 +147,51 @@ async function preencherRodape() {
 }
 
 // ---------------------------------------------------------------- inicialização
+// ---------------------------------------------------------------- boas-vindas
+// A tela de entrar ou de criar conta pede a animação; a página seguinte (conta, marcar...) mostra, já com o nome da sessão.
+const CHAVE_SAUDACAO = 'fortao:saudacao';
+const FRASES_SAUDACAO = { cadastro: 'Bem-vindo ao seu lar,', login: 'Fortaleça sua autoestima novamente,' };
+
+export function pedirSaudacao(tipo) {
+  try { sessionStorage.setItem(CHAVE_SAUDACAO, tipo); } catch { /* sem armazenamento: segue sem animação */ }
+}
+
+function mostrarSaudacao(usuario) {
+  let tipo = null;
+  try {
+    tipo = sessionStorage.getItem(CHAVE_SAUDACAO);
+    sessionStorage.removeItem(CHAVE_SAUDACAO);
+  } catch { return; }
+  // Só para clientes: o Fortão vai direto para o painel
+  if (!FRASES_SAUDACAO[tipo] || usuario?.papel !== 'cliente') return;
+  const palavras = FRASES_SAUDACAO[tipo].split(' ');
+  const frase = h('p', { class: 'boas-vindas__frase' });
+  palavras.forEach((p, i) => {
+    const s = h('span', { class: 'boas-vindas__palavra' }, p);
+    s.style.setProperty('--i', String(i));
+    frase.append(s, i < palavras.length - 1 ? ' ' : '');
+  });
+  const conteudo = h('div', { class: 'boas-vindas__conteudo' },
+    h('img', { class: 'boas-vindas__marca', src: '/img/braco.svg', alt: '', width: 64, height: 75 }),
+    frase,
+    ' ', // o leitor de tela lê "lar, Rafael" e não "lar,Rafael"
+    h('strong', { class: 'boas-vindas__nome' }, primeiroNome(usuario.nome) || 'cliente'),
+    h('span', { class: 'boas-vindas__linha', 'aria-hidden': 'true' }));
+  conteudo.style.setProperty('--n', String(palavras.length));
+  const camada = h('div', { class: `boas-vindas boas-vindas--${tipo}`, role: 'status', 'aria-live': 'polite', title: 'Toque para continuar' }, conteudo);
+  const fechar = () => {
+    if (camada.classList.contains('saindo')) return;
+    camada.classList.add('saindo');
+    document.removeEventListener('keydown', tecla);
+    setTimeout(() => camada.remove(), 450);
+  };
+  const tecla = (e) => { if (e.key === 'Escape' || e.key === 'Enter') fechar(); };
+  camada.addEventListener('click', fechar);
+  document.addEventListener('keydown', tecla);
+  document.body.append(camada);
+  setTimeout(fechar, matchMedia('(prefers-reduced-motion: reduce)').matches ? 2200 : 3600);
+}
+
 export async function iniciarCasca() {
   const topo = $('[data-topo]');
   const sentinela = $('[data-sentinela]');
@@ -157,6 +202,7 @@ export async function iniciarCasca() {
   const sessao = await carregarSessao();
   const usuario = sessao.usuario;
   aplicarPreferencias(usuario);
+  mostrarSaudacao(usuario);
   marcarNavegacao(usuario);
   const link = $('[data-conta-link]');
   if (usuario && link) {

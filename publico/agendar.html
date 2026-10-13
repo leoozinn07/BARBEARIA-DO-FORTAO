@@ -10,10 +10,16 @@
 </head>
 <body>
   <!-- incluir:topo -->
-  <main id="conteudo" class="container pagina">
-    <header class="pagina__cabeca">
-      <h1 class="titulo-pagina">Marcar horário</h1>
-      <p class="subtitulo" data-agendar-sub>Serviço, dia e horário. Você vê o valor antes de confirmar e paga na barbearia.</p>
+  <main id="conteudo" class="container pagina pagina--agendar">
+    <header class="pagina__cabeca agendar-capa">
+      <picture class="agendar-capa__foto">
+        <source type="image/webp" srcset="/img/capa-corte-480.webp 480w, /img/capa-corte-768.webp 768w, /img/capa-corte-1024.webp 1024w" sizes="(min-width: 900px) 400px, calc(100vw - 32px)">
+        <img src="/img/capa-corte.jpg" alt="Barbeiro de avental passando a máquina no cabelo de um cliente, com palmeiras e a cidade pela janela da barbearia." width="1024" height="1536" fetchpriority="high">
+      </picture>
+      <div class="agendar-capa__texto">
+        <h1 class="titulo-pagina">Marcar horário</h1>
+        <p class="subtitulo" data-agendar-sub>Serviço, dia e horário. Você vê o valor antes de confirmar e paga na barbearia.</p>
+      </div>
     </header>
     <div class="alerta" data-agendar-aviso hidden></div>
     <div data-agendamento></div>

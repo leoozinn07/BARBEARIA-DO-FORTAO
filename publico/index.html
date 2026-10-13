@@ -12,7 +12,7 @@
   <meta property="og:image" content="/img/og-barbearia.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <link rel="preload" href="/img/cena-ferramentas.svg" as="image" fetchpriority="high">
+  <link rel="preload" as="image" type="image/webp" imagesrcset="/img/banner-fortao-640.webp 640w, /img/banner-fortao-960.webp 960w, /img/banner-fortao-1672.webp 1672w" imagesizes="(min-width: 1240px) 620px, (min-width: 900px) 52vw, calc(100vw - 32px)" fetchpriority="high">
   <link rel="stylesheet" href="/css/agenda.css">
   <link rel="stylesheet" href="/css/inicio.css">
   <script type="application/ld+json">
@@ -41,7 +41,10 @@
     <!-- HERO -->
     <section class="hero container" id="inicio" aria-labelledby="hero-titulo">
       <div class="hero__cartao">
-        <img src="/img/cena-ferramentas.svg" alt="" width="1080" height="1350" fetchpriority="high">
+        <picture class="hero__banner">
+          <source type="image/webp" srcset="/img/banner-fortao-640.webp 640w, /img/banner-fortao-960.webp 960w, /img/banner-fortao-1672.webp 1672w" sizes="(min-width: 1240px) 620px, (min-width: 900px) 52vw, calc(100vw - 32px)">
+          <img src="/img/banner-fortao.jpg" alt="Banner da Barbearia do Fortão: barbeiro de avental, com máquina e tesoura na mão, na frente da barbearia, com palmeiras e a cidade ao fundo." width="1672" height="940" fetchpriority="high">
+        </picture>
         <div class="hero__texto">
           <p class="hero__saudacao" data-saudacao>Olá</p>
           <h1 id="hero-titulo">Seu corte, na hora marcada.</h1>

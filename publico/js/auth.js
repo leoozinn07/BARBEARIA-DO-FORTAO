@@ -1,6 +1,6 @@
 // Entrar, criar conta, esqueci a senha, redefinir senha e confirmar e-mail.
 import { invalidarSessao, post } from './api.js';
-import { iniciarCasca } from './casca.js';
+import { iniciarCasca, pedirSaudacao } from './casca.js';
 import { lerEscolhaGuardada } from './agendamento.js';
 import { entrarComBiometria, erroDaBiometria, temSuporte } from './biometria.js';
 import { destinoSeguro, h, icone, ligarVerSenha, limparErros, mostrarErros, ocupado } from './ui.js';
@@ -67,6 +67,7 @@ if (blocoBiometria && temSuporte()) {
     ocupado(botao, true);
     try {
       const { usuario: u } = await entrarComBiometria();
+      if (u.papel === 'cliente') pedirSaudacao('login');
       invalidarSessao();
       location.replace(destino(u));
     } catch (e) {
@@ -85,6 +86,7 @@ form?.addEventListener('submit', (ev) => {
   if (tipo === 'entrar') {
     enviar(async () => {
       const { usuario: u } = await post('/auth/entrar', { email: v.email, senha: v.senha });
+      if (u.papel === 'cliente') pedirSaudacao('login');
       invalidarSessao();
       location.replace(destino(u));
     });
@@ -100,6 +102,7 @@ form?.addEventListener('submit', (ev) => {
         aceite: form.elements.namedItem('aceite').checked,
         marketing: form.elements.namedItem('marketing').checked,
       });
+      pedirSaudacao('cadastro');
       invalidarSessao();
       location.replace(destino(u));
     });

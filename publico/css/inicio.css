@@ -2,10 +2,12 @@
 
 /* ---------- hero ---------- */
 .hero { padding-top: 4px; }
-.hero__cartao { position: relative; overflow: hidden; border-radius: var(--raio); min-height: min(70dvh, 620px); display: grid; align-items: end; isolation: isolate; box-shadow: var(--sombra); background: #111; }
-.hero__cartao img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0%; z-index: -1; }
-.hero__cartao::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgb(11 11 12 / 0) 24%, rgb(11 11 12 / 0.8) 50%, rgb(11 11 12 / 0.97) 70%); }
-.hero__texto { padding: 22px 20px; display: grid; gap: 10px; color: #f2f2f3; }
+/* Cartão escuro nos dois temas, como um pôster: o banner inteiro em cima (sem cortar o letreiro) e o texto embaixo */
+.hero__cartao { position: relative; overflow: hidden; border-radius: var(--raio); display: grid; isolation: isolate; box-shadow: var(--sombra); background: #0b0b0c; }
+.hero__banner { position: relative; display: block; overflow: hidden; border-radius: var(--raio) var(--raio) 0 0; }
+.hero__banner img { display: block; width: 100%; height: auto; aspect-ratio: 1672 / 940; }
+.hero__banner::after { content: ""; position: absolute; inset: auto 0 0; height: 30%; background: linear-gradient(180deg, rgb(11 11 12 / 0), #0b0b0c); pointer-events: none; }
+.hero__texto { padding: 4px 20px 22px; display: grid; gap: 10px; color: #f2f2f3; }
 .hero__saudacao { font-size: 0.875rem; color: #c4c4ca; font-weight: 500; }
 .hero__texto h1 { font-size: clamp(2.3rem, 10.4vw, 4.2rem); font-weight: 700; letter-spacing: -0.045em; line-height: 1; text-wrap: balance; }
 .hero__sub { color: #d6d6da; max-width: 32ch; text-shadow: 0 1px 12px rgb(0 0 0 / 0.6); }
@@ -17,6 +19,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .js .hero__cartao { animation: surgir 900ms var(--ease-out) both; }
+  .js .hero__banner img { animation: aproximar 1600ms var(--ease-out) both; }
   .js .hero__texto > * { animation: aparecer 700ms var(--ease-out) both; }
   .js .hero__texto > :nth-child(1) { animation-delay: 220ms; }
   .js .hero__texto > :nth-child(2) { animation-delay: 290ms; }
@@ -24,6 +27,7 @@
   .js .hero__texto > :nth-child(4) { animation-delay: 430ms; }
 }
 @keyframes surgir { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes aproximar { from { transform: scale(1.07); } to { transform: none; } }
 @keyframes aparecer { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
 .agendar__caixa { margin-top: 18px; }
@@ -85,7 +89,8 @@
   main { display: grid; grid-template-columns: 1.1fr 1fr; column-gap: 32px; max-width: var(--largura); margin: 0 auto; padding-inline: var(--gutter); }
   main > .container { padding-inline: 0; max-width: none; }
   .hero { grid-column: 1; grid-row: 1 / span 2; }
-  .hero__cartao { position: sticky; top: calc(var(--topo-h) + 16px); min-height: calc(100dvh - var(--topo-h) - 48px); }
+  .hero__cartao { position: sticky; top: calc(var(--topo-h) + 16px); }
+  .hero__texto { padding: 8px 28px 30px; }
   #agendar { grid-column: 2; grid-row: 1; padding-top: 4px; }
   #servicos { grid-column: 2; grid-row: 2; }
   #fortao, #como, #onde, main > section:has(.frase) { grid-column: 1 / -1; }

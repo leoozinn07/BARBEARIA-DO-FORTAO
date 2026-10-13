@@ -83,7 +83,24 @@
 .legal th { color: var(--texto); font-weight: 600; }
 .legal td { color: var(--texto-2); }
 
+/* Capa da página de marcar: ilustração do corte com o título por cima (escura nos dois temas) */
+.agendar-capa { position: relative; overflow: hidden; isolation: isolate; display: grid; align-items: end; aspect-ratio: 1 / 1; border-radius: var(--raio); background: #0b0b0c; box-shadow: var(--sombra); }
+/* Cada camada com o próprio arredondado: a foto animada vira uma camada à parte e escaparia do recorte do cartão */
+.agendar-capa__foto { position: absolute; inset: 0; z-index: -2; overflow: hidden; border-radius: inherit; }
+.agendar-capa__foto img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 36%; }
+.agendar-capa::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: linear-gradient(180deg, rgb(11 11 12 / 0) 38%, rgb(11 11 12 / 0.82) 70%, #0b0b0c 100%); }
+.agendar-capa__texto { display: grid; gap: 8px; padding: 20px; color: #f2f2f3; }
+.agendar-capa .subtitulo { color: #d6d6da; max-width: 40ch; }
+@media (prefers-reduced-motion: no-preference) {
+  .js .agendar-capa__foto img { animation: capa-aproximar 1600ms var(--ease-out) both; }
+}
+@keyframes capa-aproximar { from { transform: scale(1.07); } to { transform: none; } }
+
 @media (min-width: 900px) {
   .pagina { max-width: 760px; }
+  /* No computador, a capa fica parada à esquerda enquanto o cliente escolhe à direita */
+  .pagina--agendar { max-width: 1120px; grid-template-columns: minmax(300px, 400px) 1fr; column-gap: 32px; align-items: start; }
+  .pagina--agendar > * { grid-column: 2; }
+  .pagina--agendar > .agendar-capa { grid-column: 1; grid-row: 1 / span 3; position: sticky; top: calc(var(--topo-h) + 16px); aspect-ratio: 2 / 3; max-height: calc(100dvh - var(--topo-h) - 32px); }
   .horario__acoes { grid-template-columns: repeat(4, auto); justify-content: start; }
 }
