@@ -17,11 +17,22 @@ export const campos = {
     .transform((s) => (s === '' ? null : s))
     .optional()
     .nullable(),
+  // Na hora de marcar o WhatsApp é obrigatório: é por ele que vão a confirmação e os lembretes
+  telefoneObrigatorio: z
+    .string({ error: 'Informe seu WhatsApp com DDD para receber os lembretes.' })
+    .trim()
+    .transform((s) => s.replace(/\D/g, ''))
+    .refine((s) => /^(55)?\d{10,11}$/.test(s), 'Informe seu WhatsApp com DDD, por exemplo (11) 91234-5678.'),
   token: z.string().trim().min(20, 'Link inválido.').max(200, 'Link inválido.'),
   codigo: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{8}$/, 'Código inválido.'),
   dataISO: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida.'),
   instante: z.iso.datetime({ offset: true, error: 'Horário inválido.' }),
   slug: z.string().trim().regex(/^[a-z0-9-]{2,60}$/, 'Serviço inválido.'),
+  // Adicionais na URL: "luzes,boyzao"; no corpo: ["luzes", "boyzao"]
+  adicionaisQuery: z.string().trim().max(400).optional().default('')
+    .transform((s) => s.split(',').map((x) => x.trim()).filter(Boolean))
+    .pipe(z.array(z.string().regex(/^[a-z0-9-]{2,60}$/, 'Adicional inválido.')).max(5, 'Escolha até 5 adicionais.')),
+  adicionais: z.array(z.string().trim().regex(/^[a-z0-9-]{2,60}$/, 'Adicional inválido.')).max(5, 'Escolha até 5 adicionais.').optional().default([]),
   hora: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Hora inválida.'),
 };
 

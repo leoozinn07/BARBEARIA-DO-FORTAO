@@ -13,6 +13,7 @@ import { rotasAdmin } from './rotas/admin.js';
 import { rotasAuth } from './rotas/auth.js';
 import { rotasConta } from './rotas/conta.js';
 import { rotasPublicas } from './rotas/publico.js';
+import { rotasWhatsapp } from './rotas/whatsapp.js';
 import { servirPaginas } from './paginas.js';
 
 const PUBLICO = path.join(RAIZ, 'publico');
@@ -45,6 +46,9 @@ export function criarApp() {
       }
     },
   }));
+
+  // WhatsApp: a Meta chama este endereço quando um cliente responde (fora da API comum, sem sessão e sem CSRF)
+  app.use('/api/whatsapp/webhook', limites.api, rotasWhatsapp);
 
   const api = express.Router();
   api.use(limites.api, express.json({ limit: '32kb' }), cookieParser(), carregarSessao, protegerCsrf);

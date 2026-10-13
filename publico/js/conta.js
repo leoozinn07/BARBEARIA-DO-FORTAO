@@ -1,7 +1,8 @@
 // Minha conta: horários (remarcar, cancelar, agenda do celular), perfil, aparência, senha e LGPD.
 import { get, invalidarSessao, patch, post } from './api.js';
-import { iniciarCasca, obterConfig } from './casca.js';
+import { definirTema, iniciarCasca, obterConfig } from './casca.js';
 import { montarAgendamento } from './agendamento.js';
+import { acoesLembrete } from './lembrete.js';
 import {
   abrirFolha, dataCurta, h, hora, icone, ligarVerSenha, limparErros, mostrarErros, ocupado, primeiroNome, quando, reais, telefoneBonito, toast, toastErro,
 } from './ui.js';
@@ -44,13 +45,11 @@ if (!usuario.email_verificado) {
 const STATUS = { confirmado: 'Confirmado', concluido: 'Concluído', cancelado: 'Cancelado', faltou: 'Faltou' };
 let config = null;
 
-function arquivoIcs(ag) {
-  const z = (iso) => new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-  const endereco = config ? [config.negocio.endereco, config.negocio.bairro, `${config.negocio.cidade} - ${config.negocio.uf}`].filter(Boolean).join(', ') : 'Cohab 5, São Paulo - SP';
-  const texto = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Barbearia do Fortao//PT-BR', 'BEGIN:VEVENT', `UID:${ag.codigo}@barbearia-do-fortao`, `DTSTAMP:${z(new Date().toISOString())}`,
-    `DTSTART:${z(ag.inicio)}`, `DTEND:${z(ag.fim)}`, `SUMMARY:${ag.servico} na Barbearia do Fortão`, `LOCATION:${endereco.replace(/[,;]/g, (c) => `\\${c}`)}`,
-    'BEGIN:VALARM', 'TRIGGER:-PT1H', 'ACTION:DISPLAY', 'DESCRIPTION:Corte na Barbearia do Fortão', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
-  return URL.createObjectURL(new Blob([texto], { type: 'text/calendar' }));
+function abrirLembrete(ag) {
+  const folha = $('[data-folha-lembrete]');
+  $('[data-lembrete-texto]').textContent = `${ag.servico}, ${quando(ag.inicio)}.`;
+  $('[data-lembrete-acoes]').replaceChildren(acoesLembrete(ag, config));
+  abrirFolha(folha);
 }
 
 function cartaoHorario(ag) {
@@ -64,15 +63,16 @@ function cartaoHorario(ag) {
       h('span', {}, icone('currency-circle-dollar'), `${reais(ag.preco_centavos)} na barbearia`),
       h('span', {}, icone('timer'), `${ag.duracao_min} min`),
       h('span', {}, icone('hash'), ag.codigo),
+      ag.whatsapp_lembrete ? h('span', {}, icone('whatsapp-logo'), ag.presenca_confirmada ? 'Presença confirmada' : 'Lembrete no WhatsApp') : null,
     ),
     h('div', { class: 'horario__acoes' },
+      h('button', { class: 'botao botao--suave', type: 'button', onclick: () => abrirLembrete(ag) }, icone('bell-ringing'), 'Lembrete'),
       ag.pode_alterar ? h('button', { class: 'botao botao--suave', type: 'button', onclick: () => abrirRemarcar(ag) }, icone('arrows-left-right'), 'Remarcar') : null,
       ag.pode_alterar ? h('button', { class: 'botao botao--suave', type: 'button', onclick: () => abrirCancelar(ag) }, icone('x-circle'), 'Cancelar') : null,
-      h('a', { class: 'botao botao--suave', href: arquivoIcs(ag), download: `fortao-${ag.codigo}.ics` }, icone('calendar-plus'), 'Agenda'),
       h('a', { class: 'botao botao--suave', href: '/#onde' }, icone('map-pin'), 'Como chegar'),
     ),
     ag.pode_alterar ? null : h('p', { class: 'horario__nota' },
-      `Faltam menos de ${config?.agenda?.cancelar_ate_horas ?? 2} h. Para mudar agora, fale com a barbearia`,
+      `Faltam menos de ${config?.agenda?.cancelar_ate_horas ?? 2} h: já não dá para cancelar ou remarcar pelo site. Para mudar agora, fale com a barbearia`,
       whatsapp ? [' pelo ', h('a', { class: 'link', href: `https://wa.me/${whatsapp.startsWith('55') ? '' : '55'}${whatsapp}`, target: '_blank', rel: 'noopener' }, 'WhatsApp')] : '',
       '.'),
   );
@@ -82,10 +82,11 @@ async function carregarHorarios() {
   config ||= await obterConfig();
   try {
     const { proximos, historico } = await get('/conta/agendamentos');
-    $('[data-proximos]').replaceChildren(...(proximos.length ? proximos.map(cartaoHorario) : [
-      h('div', { class: 'vazio' }, icone('calendar-blank'), h('b', {}, 'Nenhum horário marcado'), h('span', {}, 'Bora ficar na régua? Escolhe o dia e a hora.'),
-        h('a', { class: 'botao botao--cheio', href: '/agendar' }, 'Marcar horário')),
-    ]));
+    const vazio = () => h('div', { class: 'vazio' }, icone('calendar-blank'), h('b', {}, 'Nenhum horário marcado'), h('span', {}, 'Bora ficar na régua? Escolhe o dia e a hora.'),
+      h('a', { class: 'botao botao--cheio', href: '/agendar' }, 'Marcar horário'));
+    $('[data-proximos]').replaceChildren(...(proximos.length ? proximos.map(cartaoHorario) : [vazio()]));
+    // No perfil, o próximo horário aparece logo no topo
+    $('[data-proximo-perfil]').replaceChildren(proximos.length ? cartaoHorario(proximos[0]) : vazio());
     $('[data-historico]').replaceChildren(...(historico.length ? historico.map((ag) => h('li', {},
       h('span', {}, ag.servico), h('small', {}, `${dataCurta(ag.inicio)}, ${hora(ag.inicio)}, ${reais(ag.preco_centavos)}`), h('span', { class: `selo selo--${ag.status}` }, STATUS[ag.status]),
     )) : [h('li', {}, h('small', {}, 'Seus cortes anteriores aparecem aqui.'))]));
@@ -99,6 +100,7 @@ function abrirRemarcar(ag) {
   $('[data-remarcar-atual]').textContent = `Hoje está: ${ag.servico}, ${quando(ag.inicio)}. Escolha o novo dia e horário.`;
   montarAgendamento($('[data-remarcar-agenda]'), {
     servicoFixo: { slug: ag.servico_slug, nome: ag.servico, preco_centavos: ag.preco_centavos, duracao_min: ag.duracao_min },
+    adicionaisFixos: ag.adicionais.map((a) => a.slug),
     inicial: {},
     rotulo: 'Confirmar novo horário',
     async aoConfirmar({ inicio }) {
@@ -114,6 +116,7 @@ function abrirRemarcar(ag) {
 function abrirCancelar(ag) {
   const folha = $('[data-folha-cancelar]');
   $('[data-cancelar-texto]').textContent = `${ag.servico}, ${quando(ag.inicio)}. O horário fica livre para outra pessoa.`;
+  $('[data-cancelar-prazo]').textContent = `Dá para cancelar até ${config?.agenda?.cancelar_ate_horas ?? 2} horas antes do horário.`;
   const erro = $('[data-cancelar-erro]');
   erro.hidden = true;
   const botao = $('[data-cancelar-confirmar]');
@@ -168,9 +171,18 @@ const letra = $('[data-letra-grande]');
 letra.checked = Boolean(prefs.letra_grande);
 letra.addEventListener('change', () => salvarPreferencias({ letra_grande: letra.checked }));
 
+// O botão de tema do topo também muda a escolha aqui
+document.addEventListener('tema-mudou', (e) => {
+  prefs.tema = e.detail;
+  document.querySelectorAll('[data-tema-opcoes] input').forEach((i) => { i.checked = i.value === e.detail; });
+});
+
 async function salvarPreferencias(mudanca) {
   Object.assign(prefs, mudanca);
-  raiz.dataset.tema = prefs.tema;
+  if (mudanca.tema) {
+    definirTema(mudanca.tema, null);
+    usuario.preferencias = { ...usuario.preferencias, tema: mudanca.tema };
+  }
   if (prefs.letra_grande) raiz.dataset.letra = 'grande'; else delete raiz.dataset.letra;
   try {
     localStorage.setItem('fortao:tema', prefs.tema);

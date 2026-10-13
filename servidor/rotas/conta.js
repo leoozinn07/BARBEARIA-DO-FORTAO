@@ -9,7 +9,7 @@ import { conferirSenha, hashSenha, motivoSenhaFraca } from '../lib/seguranca.js'
 import { campos, validar, z } from '../lib/validacao.js';
 import { limites } from '../middlewares/limites.js';
 import { encerrarSessao, encerrarTodas, exigirLogin } from '../middlewares/sessao.js';
-import { cancelarAgendamento, criarAgendamento, paraCliente, remarcarAgendamento } from '../servicos/agenda.js';
+import { anexarAdicionais, cancelarAgendamento, criarAgendamento, paraCliente, remarcarAgendamento } from '../servicos/agenda.js';
 import { auditar } from '../servicos/auditoria.js';
 import { lerConfiguracoes } from '../servicos/configuracoes.js';
 import { criarAviso } from '../servicos/eventos.js';
@@ -144,6 +144,7 @@ rotasConta.get('/conta/agendamentos', rota(async (req, res) => {
     'SELECT a.*, s.slug AS servico_slug FROM agendamentos a JOIN servicos s ON s.id = a.servico_id WHERE a.cliente_id = ? ORDER BY a.inicio DESC LIMIT 100',
     [req.usuario.id],
   );
+  await anexarAdicionais(linhas);
   const agora = Date.now();
   const todos = linhas.map((a) => paraCliente(a, agenda));
   res.set('Cache-Control', 'no-store').json({
@@ -152,19 +153,44 @@ rotasConta.get('/conta/agendamentos', rota(async (req, res) => {
   });
 }));
 
-rotasConta.post('/agendamentos', limites.agendar, validar(z.object({ servico: campos.slug, inicio: campos.instante })), rota(async (req, res) => {
+// Marcar exige o telefone (mini formulário da confirmação): é por ele que vão a confirmação e os lembretes no WhatsApp
+const esquemaMarcar = z.object({
+  servico: campos.slug,
+  adicionais: campos.adicionais,
+  inicio: campos.instante,
+  telefone: campos.telefoneObrigatorio,
+  whatsapp: z.boolean().optional().default(true),
+});
+
+rotasConta.post('/agendamentos', limites.agendar, validar(esquemaMarcar), rota(async (req, res) => {
   const { agenda } = await lerConfiguracoes();
+  const d = req.dados;
+  const u = req.usuario;
+  // O número informado vira o telefone da conta (o cliente pode mudar depois no perfil)
+  if (d.telefone !== u.telefone) await consulta('UPDATE usuarios SET telefone = ? WHERE id = ?', [d.telefone, u.id]);
+  if (d.whatsapp) {
+    const ultimo = await umaLinha("SELECT aceito FROM consentimentos WHERE usuario_id = ? AND tipo = 'whatsapp' ORDER BY id DESC LIMIT 1", [u.id]);
+    if (!ultimo?.aceito) {
+      await consulta('INSERT INTO consentimentos (usuario_id, tipo, versao, aceito, ip) VALUES (?, ?, ?, ?, ?)', [
+        u.id, 'whatsapp', config.versaoPrivacidade, 1, req.ip?.slice(0, 45) ?? null,
+      ]);
+    }
+  }
   const ag = await criarAgendamento({
-    cliente: { id: req.usuario.id, nome: req.usuario.nome, telefone: req.usuario.telefone },
-    slug: req.dados.servico,
-    inicio: req.dados.inicio,
+    cliente: { id: u.id, nome: u.nome, telefone: d.telefone },
+    slug: d.servico,
+    adicionais: d.adicionais,
+    inicio: d.inicio,
+    whatsapp: d.whatsapp,
   });
+  await anexarAdicionais([ag]);
   res.status(201).json({ agendamento: paraCliente(ag, agenda) });
 }));
 
 rotasConta.post('/agendamentos/:codigo/cancelar', validar(z.object({ codigo: campos.codigo }), 'params'), rota(async (req, res) => {
   const { agenda } = await lerConfiguracoes();
   const ag = await cancelarAgendamento({ codigo: req.dados.codigo, usuario: req.usuario });
+  await anexarAdicionais([ag]);
   res.json({ agendamento: paraCliente(ag, agenda) });
 }));
 
@@ -173,6 +199,7 @@ rotasConta.post('/agendamentos/:codigo/remarcar', limites.agendar, validar(z.obj
   if (!corpo.success) throw erros.validacao({ inicio: 'Horário inválido.' });
   const { agenda } = await lerConfiguracoes();
   const ag = await remarcarAgendamento({ codigo: req.dados.codigo, usuario: req.usuario, inicio: corpo.data.inicio });
+  await anexarAdicionais([ag]);
   res.json({ agendamento: paraCliente(ag, agenda) });
 }));
 

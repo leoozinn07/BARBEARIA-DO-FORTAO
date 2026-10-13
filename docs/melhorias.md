@@ -6,7 +6,7 @@ Tudo aqui é opcional. Escolha o que entra e em que ordem.
 
 | O quê | Padrão atual | Onde |
 | --- | --- | --- |
-| Serviços: nome, preço, duração, descrição, criar, esconder e remover | 3 serviços (R$ 40, 45 e 50) | Painel > Serviços |
+| Serviços e adicionais: nome, preço, duração, descrição, criar, esconder e remover | 5 serviços e 3 adicionais | Painel > Serviços |
 | Dias e horário de funcionamento, pausa de almoço | Ter a sex 9h às 20h, sáb 8h às 18h | Painel > Horários |
 | Antecedência mínima para marcar | 30 min | Painel > Barbearia |
 | Quantos dias a agenda fica aberta | 30 dias | Painel > Barbearia |
@@ -18,7 +18,7 @@ Tudo aqui é opcional. Escolha o que entra e em que ordem.
 
 ## Alternativas de visual
 
-- **Fotos de verdade no lugar das ilustrações:** hoje o site usa ilustrações próprias (navalha, tesoura, pente, máquina, pincel). Dá para trocar por fotos geradas por IA no Figma (gasta créditos do seu plano) ou por fotos da barbearia, sem o Fortão: cadeira, bancada, fachada.
+- **Fotos de verdade no lugar das ilustrações:** a foto de IA do Figma (barbearia vazia à noite) já foi gerada; falta só liberar o download para colocar no topo do site. Fotos reais da barbearia, sem o Fortão (cadeira, bancada, fachada), também funcionam.
 - **Mais ou menos dourado:** hoje ele aparece no preço da tabela, no contador de avisos, na escolha marcada, no gráfico e no contorno de toque. Dá para tirar do preço ou levar para o botão principal.
 - **Tema claro como padrão:** hoje o escuro é o padrão e o cliente escolhe o claro no perfil.
 
@@ -33,7 +33,6 @@ Tudo aqui é opcional. Escolha o que entra e em que ordem.
 | Exportar o rendimento | Baixar a tabela do período em planilha (CSV) para o contador. | Baixo |
 | Galeria de cortes | O Fortão sobe fotos dos cortes da semana pelo painel. | Médio |
 | Avaliação depois do corte | E-mail pedindo nota e link para o Google Maps, que ajuda a aparecer nas buscas da região. | Baixo |
-| Lembrete por WhatsApp | Além do e-mail. Exige a API oficial do WhatsApp (cobrada por mensagem). | Médio |
 | Vários barbeiros | O banco já aceita; falta a escolha do barbeiro na tela de marcar e o rendimento por barbeiro. | Médio |
 | Estatísticas sem cookies | Visitas e conversão com Plausible ou Umami, sem banner de cookies. | Baixo |
 
@@ -51,5 +50,6 @@ Isso precisa de dados reais acumulados. O banco já guarda o histórico no forma
 
 1. Endereço exato, WhatsApp, Instagram, razão social e CNPJ no painel.
 2. Domínio e e-mail com SPF/DKIM configurados.
-3. Revisão jurídica dos termos, da política de privacidade e da página LGPD.
-4. Licença do desenho do braço da logo (a imagem original tem marca d'água de banco de imagens) ou um braço redesenhado.
+3. Conta no Meta Business, número do WhatsApp e os 4 modelos aprovados ([whatsapp.md](whatsapp.md)).
+4. Revisão jurídica dos termos, da política de privacidade e da página LGPD.
+5. Licença do desenho do braço da logo (a imagem original tem marca d'água de banco de imagens) ou um braço redesenhado.

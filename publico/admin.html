@@ -20,6 +20,7 @@
       <button class="botao botao--cheio" type="button" data-novo-abrir><i class="ph-bold ph-plus" aria-hidden="true"></i> Novo horário</button>
     </header>
 
+    <p class="alerta" data-aviso-whatsapp hidden><i class="ph ph-whatsapp-logo" aria-hidden="true"></i><span>O WhatsApp ainda não está ligado: confirmações e lembretes estão sendo guardados, mas não saem. O passo a passo está em docs/whatsapp.md.</span></p>
     <p class="alerta" data-aviso-email hidden><i class="ph ph-envelope-simple-open" aria-hidden="true"></i><span>Os e-mails de confirmação e lembrete ainda não estão saindo: falta configurar o envio (SMTP). O passo a passo está no guia de deploy. Até lá, os avisos aparecem só no site.</span></p>
 
     <section class="resumo" aria-label="Resumo" data-resumo>
@@ -125,17 +126,26 @@
     <!-- SERVIÇOS -->
     <section class="painel" data-painel="servicos" aria-labelledby="serv-titulo" hidden>
       <h2 class="titulo" id="serv-titulo">Serviços e preços</h2>
+      <p class="subtitulo">O que muda aqui aparece na hora no site. Horários já marcados mantêm o preço do dia em que foram marcados.</p>
       <div class="pilha" data-servicos></div>
+      <h2 class="titulo">Adicionais</h2>
+      <p class="subtitulo">Somam ao corte (preço e tempo). O cliente escolhe na hora de marcar, como luzes, boyzão e progressiva.</p>
+      <div class="pilha" data-adicionais></div>
       <form class="grupo-form" data-form-novo-servico novalidate>
-        <h2>Novo serviço</h2>
+        <h2>Adicionar ao catálogo</h2>
         <p class="alerta alerta--erro" data-erro-geral role="alert" tabindex="-1" hidden></p>
-        <div class="campo"><label for="ns-nome">Nome</label><input id="ns-nome" name="nome" required maxlength="80"><p class="erro-campo" data-erro-de="nome"></p></div>
+        <fieldset class="opcoes-tema opcoes-tema--2">
+          <legend class="rotulo">Tipo</legend>
+          <label><input type="radio" name="tipo" value="principal" checked><span><i class="ph ph-scissors" aria-hidden="true"></i>Serviço</span></label>
+          <label><input type="radio" name="tipo" value="adicional"><span><i class="ph ph-plus-circle" aria-hidden="true"></i>Adicional</span></label>
+        </fieldset>
+        <div class="campo"><label for="ns-nome">Nome</label><input id="ns-nome" name="nome" required maxlength="80" placeholder="Ex.: Pigmentação"><p class="erro-campo" data-erro-de="nome"></p></div>
         <div class="duas-colunas">
           <div class="campo"><label for="ns-preco">Preço (R$)</label><input id="ns-preco" name="preco" type="number" min="0" step="1" inputmode="numeric" required></div>
-          <div class="campo"><label for="ns-duracao">Duração (min)</label><input id="ns-duracao" name="duracao" type="number" min="10" step="5" inputmode="numeric" required></div>
+          <div class="campo"><label for="ns-duracao">Duração (min)</label><input id="ns-duracao" name="duracao" type="number" min="5" step="5" inputmode="numeric" required></div>
         </div>
         <div class="campo"><label for="ns-desc">Descrição</label><input id="ns-desc" name="descricao" maxlength="255"></div>
-        <button class="botao botao--suave" type="submit">Adicionar serviço</button>
+        <button class="botao botao--cheio" type="submit">Adicionar ao catálogo</button>
       </form>
     </section>
 
@@ -211,9 +221,11 @@
       </div>
       <div class="campo" data-campos-conta hidden><label for="n-email">E-mail da conta</label><input id="n-email" name="email_cliente" type="email"><p class="erro-campo" data-erro-de="email_cliente"></p></div>
       <div class="campo"><label for="n-servico">Serviço</label><select id="n-servico" name="servico" data-novo-servico></select></div>
+      <fieldset class="novo-adicionais" data-novo-adicionais-grupo hidden><legend class="rotulo-campo">Adicionais (opcional)</legend><div class="ag-adicionais" data-novo-adicionais></div></fieldset>
       <div class="campo"><label for="n-dia">Dia</label><input id="n-dia" name="dia" type="date" data-novo-dia></div>
       <fieldset class="campo"><legend class="rotulo-campo">Horário</legend><div class="ag-periodo__lista" data-novo-horarios></div><p class="erro-campo" data-erro-de="inicio"></p></fieldset>
       <div class="campo"><label for="n-obs">Observação (opcional)</label><input id="n-obs" name="observacao" maxlength="255"></div>
+      <label class="marcar"><input type="checkbox" name="whatsapp" checked><span>Mandar confirmação e lembretes no WhatsApp do cliente</span></label>
       <button class="botao botao--cheio botao--bloco" type="submit">Marcar horário</button>
     </form>
   </dialog>

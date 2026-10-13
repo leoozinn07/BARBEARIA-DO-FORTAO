@@ -3,7 +3,7 @@
 
 const ALVOS = [
   '.botao', '.icone-botao', '.aba', '.marca', '.hero__livre', '.onde__mapa-botao', '.topo__links a', '.rodape__links a', '.segmentos a',
-  '.ag-servico', '.ag-dia', '.ag-hora', '.opcoes-tema label', '.marcar', '.aviso-item', '[data-toque]',
+  '.ag-servico', '.ag-adicional', '.ag-dia', '.ag-hora', '.opcoes-tema label', '.marcar', '.aviso-item', '[data-toque]',
   '.horario', '.item-agenda', '.lista-admin li', '.servico-admin', '.dia-semana', '.resumo__item', '.kpi', '.rend-servico',
   '.tabela__item', '.passo', '.frase', '.ag-resumo', '.cartao', '.grupo-form', '.onde', '.fortao',
 ].join(', ');

@@ -40,19 +40,20 @@ rotasPublicas.get('/config', rota(async (_req, res) => {
 }));
 
 rotasPublicas.get('/servicos', rota(async (_req, res) => {
-  const servicos = await listarServicos();
+  const lista = await listarServicos();
+  const publico = ({ slug, nome, descricao, preco_centavos, duracao_min }) => ({ slug, nome, descricao, preco_centavos, duracao_min });
   res.set('Cache-Control', 'public, max-age=60').json({
-    servicos: servicos.map(({ slug, nome, descricao, preco_centavos, duracao_min }) => ({ slug, nome, descricao, preco_centavos, duracao_min })),
+    servicos: lista.filter((s) => s.tipo === 'principal').map(publico),
+    adicionais: lista.filter((s) => s.tipo === 'adicional').map(publico),
   });
 }));
 
-rotasPublicas.get('/dias', validar(z.object({ servico: campos.slug }), 'query'), rota(async (req, res) => {
-  const { dias } = await diasDisponiveis({ slug: req.dados.servico });
-  res.set('Cache-Control', 'no-store').json({ dias });
+rotasPublicas.get('/dias', validar(z.object({ servico: campos.slug, adicionais: campos.adicionaisQuery }), 'query'), rota(async (req, res) => {
+  const { dias, pacote } = await diasDisponiveis({ slug: req.dados.servico, adicionais: req.dados.adicionais });
+  res.set('Cache-Control', 'no-store').json({ dias, duracao_min: pacote.duracao_min, preco_centavos: pacote.preco_centavos });
 }));
 
-rotasPublicas.get('/horarios', validar(z.object({ servico: campos.slug, data: campos.dataISO }), 'query'), rota(async (req, res) => {
-  const { horarios } = await horariosDoDia({ slug: req.dados.servico, dataISO: req.dados.data });
+rotasPublicas.get('/horarios', validar(z.object({ servico: campos.slug, adicionais: campos.adicionaisQuery, data: campos.dataISO }), 'query'), rota(async (req, res) => {
+  const { horarios } = await horariosDoDia({ slug: req.dados.servico, adicionais: req.dados.adicionais, dataISO: req.dados.data });
   res.set('Cache-Control', 'no-store').json({ data: req.dados.data, horarios });
 }));
-

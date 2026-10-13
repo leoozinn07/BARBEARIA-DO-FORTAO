@@ -1,5 +1,5 @@
-// Componente "Marque em 3 toques": serviço, dia e horário com dados reais da API.
-// Usado na página inicial, em /agendar e na remarcação (modo remarcar: serviço fixo).
+// Componente "Marque em 3 toques": serviço (com adicionais opcionais), dia e horário com dados reais da API.
+// Usado na página inicial, em /agendar e na remarcação (modo remarcar: serviço e adicionais fixos).
 import { get } from './api.js';
 import { h, quando, reais } from './ui.js';
 
@@ -21,15 +21,28 @@ function periodo(horaTexto) {
   return hh < 12 ? 'Manhã' : hh < 18 ? 'Tarde' : 'Noite';
 }
 
+/** Corte + adicionais escolhidos: nome, preço e duração somados (o servidor confere tudo de novo). */
+export function pacote(servico, adicionais = []) {
+  return {
+    nome: [servico.nome, ...adicionais.map((a) => a.nome)].join(' + '),
+    preco_centavos: servico.preco_centavos + adicionais.reduce((t, a) => t + a.preco_centavos, 0),
+    duracao_min: servico.duracao_min + adicionais.reduce((t, a) => t + a.duracao_min, 0),
+  };
+}
+
 /**
  * @param {HTMLElement} raiz
- * @param {{ aoConfirmar: Function, servicoFixo?: object, rotulo?: string, inicial?: object, legendaId?: string }} opcoes
+ * @param {{ aoConfirmar: Function, servicoFixo?: object, adicionaisFixos?: string[], rotulo?: string, inicial?: object }} opcoes
  */
 export function montarAgendamento(raiz, opcoes) {
-  const estado = { servicos: [], servico: null, dias: [], dia: null, horarios: [], inicio: null, carregando: false };
+  const estado = { servicos: [], catalogoAdicionais: [], adicionais: [], servico: null, dias: [], dia: null, horarios: [], inicio: null, carregando: false };
   const inicial = opcoes.inicial || lerEscolhaGuardada() || {};
+  estado.adicionais = [...(opcoes.adicionaisFixos || inicial.adicionais || [])];
 
   const caixaServicos = h('div', { class: 'ag-servicos' });
+  const caixaAdicionais = h('div', { class: 'ag-adicionais' });
+  const grupoAdicionais = h('fieldset', { class: 'ag-grupo', hidden: true },
+    h('legend', { class: 'rotulo' }, 'Quer adicionar algo? ', h('span', { class: 'rotulo__opcional' }, '(opcional)')), caixaAdicionais);
   const caixaDias = h('div', { class: 'ag-dias' });
   const caixaHoras = h('div', { class: 'ag-horas', 'aria-live': 'polite' });
   const resumo = h('p', { class: 'ag-resumo__texto', 'aria-live': 'polite' }, 'Escolha um horário');
@@ -38,6 +51,7 @@ export function montarAgendamento(raiz, opcoes) {
 
   const form = h('form', { class: 'ag', novalidate: true },
     opcoes.servicoFixo ? null : h('fieldset', { class: 'ag-grupo' }, h('legend', { class: 'rotulo' }, 'Serviço'), caixaServicos),
+    opcoes.servicoFixo ? null : grupoAdicionais,
     h('fieldset', { class: 'ag-grupo' }, h('legend', { class: 'rotulo' }, 'Dia'), caixaDias),
     h('fieldset', { class: 'ag-grupo' }, h('legend', { class: 'rotulo' }, 'Horário'), caixaHoras),
     erro,
@@ -47,19 +61,38 @@ export function montarAgendamento(raiz, opcoes) {
 
   const esqueleto = (n, classe) => Array.from({ length: n }, () => h('div', { class: `esqueleto ${classe}` }));
 
+  const adicionaisEscolhidos = () => estado.catalogoAdicionais.filter((a) => estado.adicionais.includes(a.slug));
+  const consultaAdicionais = () => (estado.adicionais.length ? `&adicionais=${encodeURIComponent(estado.adicionais.join(','))}` : '');
+
   function atualizarResumo() {
     const pronto = estado.servico && estado.inicio;
     botao.disabled = !pronto || estado.carregando;
     resumo.classList.add('trocando');
     setTimeout(() => {
       if (pronto) {
-        resumo.replaceChildren(h('b', {}, estado.servico.nome), `, ${quando(estado.inicio)}, `, h('b', {}, reais(estado.servico.preco_centavos)));
+        const p = opcoes.servicoFixo ? estado.servico : pacote(estado.servico, adicionaisEscolhidos());
+        resumo.replaceChildren(h('b', {}, p.nome), `, ${quando(estado.inicio)}, `, h('b', {}, reais(p.preco_centavos)));
       } else {
         resumo.textContent = estado.dia ? 'Agora escolha o horário' : 'Escolha um horário';
       }
       resumo.classList.remove('trocando');
     }, 110);
-    if (pronto) guardarEscolha({ servico: estado.servico.slug, dia: estado.dia, inicio: estado.inicio });
+    if (pronto && !opcoes.servicoFixo) guardarEscolha({ servico: estado.servico.slug, adicionais: estado.adicionais, dia: estado.dia, inicio: estado.inicio });
+  }
+
+  function desenharAdicionais() {
+    grupoAdicionais.hidden = !estado.catalogoAdicionais.length;
+    caixaAdicionais.replaceChildren(...estado.catalogoAdicionais.map((a) => h('label', { class: 'ag-adicional' },
+      h('input', {
+        type: 'checkbox', name: 'adicional', value: a.slug, checked: estado.adicionais.includes(a.slug),
+        onchange: (e) => {
+          estado.adicionais = e.target.checked ? [...estado.adicionais, a.slug] : estado.adicionais.filter((x) => x !== a.slug);
+          escolherServico(estado.servico.slug);
+        },
+      }),
+      h('span', { class: 'ag-adicional__nome' }, a.nome),
+      h('span', { class: 'ag-adicional__info' }, `+ ${reais(a.preco_centavos)} · ${a.duracao_min} min`),
+    )));
   }
 
   function desenharServicos() {
@@ -121,7 +154,7 @@ export function montarAgendamento(raiz, opcoes) {
     caixaHoras.replaceChildren(...esqueleto(8, 'ag-hora-esq'));
     atualizarResumo();
     try {
-      const { dias } = await get(`/dias?servico=${encodeURIComponent(estado.servico.slug)}`);
+      const { dias } = await get(`/dias?servico=${encodeURIComponent(estado.servico.slug)}${consultaAdicionais()}`);
       estado.dias = dias;
       const manter = dias.find((d) => d.data === estado.dia && d.livres > 0);
       estado.dia = (manter || dias.find((d) => d.livres > 0))?.data ?? null;
@@ -139,7 +172,7 @@ export function montarAgendamento(raiz, opcoes) {
     if (!data) { desenharHoras(); return; }
     caixaHoras.replaceChildren(...esqueleto(8, 'ag-hora-esq'));
     try {
-      const { horarios } = await get(`/horarios?servico=${encodeURIComponent(estado.servico.slug)}&data=${data}`);
+      const { horarios } = await get(`/horarios?servico=${encodeURIComponent(estado.servico.slug)}${consultaAdicionais()}&data=${data}`);
       estado.horarios = horarios;
       if (manterInicio && horarios.some((x) => x.inicio === manterInicio)) estado.inicio = manterInicio;
       desenharHoras();
@@ -157,7 +190,7 @@ export function montarAgendamento(raiz, opcoes) {
     botao.setAttribute('aria-busy', 'true');
     botao.disabled = true;
     try {
-      await opcoes.aoConfirmar({ servico: estado.servico, inicio: estado.inicio });
+      await opcoes.aoConfirmar({ servico: estado.servico, adicionais: adicionaisEscolhidos(), inicio: estado.inicio });
     } catch (e) {
       erro.textContent = e.message;
       erro.hidden = false;
@@ -178,11 +211,15 @@ export function montarAgendamento(raiz, opcoes) {
     }
     caixaServicos.replaceChildren(...esqueleto(3, 'ag-servico-esq'));
     try {
-      const { servicos } = await get('/servicos');
+      const { servicos, adicionais } = await get('/servicos');
       estado.servicos = servicos;
+      estado.catalogoAdicionais = adicionais || [];
+      // Adicional guardado que saiu do catálogo não volta
+      estado.adicionais = estado.adicionais.filter((slug) => estado.catalogoAdicionais.some((a) => a.slug === slug));
       estado.servico = servicos.find((s) => s.slug === inicial.servico) || servicos[0];
       estado.dia = inicial.dia || null;
       desenharServicos();
+      desenharAdicionais();
       await escolherServico(estado.servico.slug);
     } catch (e) {
       caixaServicos.replaceChildren(h('p', { class: 'alerta alerta--erro' }, e.message));

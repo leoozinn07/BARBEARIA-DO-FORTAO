@@ -3,13 +3,20 @@ import { fileURLToPath } from 'node:url';
 import { consulta, umaLinha, fecharPool } from './index.js';
 import { log } from '../lib/log.js';
 
+// Preços e durações iniciais: o Fortão muda tudo pelo painel (aba Serviços)
 export const SERVICOS_INICIAIS = [
-  { slug: 'corte-fortao', nome: 'Corte Fortão', descricao: 'O corte da casa, do jeito que você pedir.', preco_centavos: 4000, duracao_min: 40, ordem: 1 },
-  { slug: 'corte-sobrancelha', nome: 'Corte e sobrancelha', descricao: 'Corte completo com a sobrancelha alinhada.', preco_centavos: 4500, duracao_min: 45, ordem: 2 },
-  { slug: 'corte-barba', nome: 'Corte e barba', descricao: 'Cabelo e barba feitos na mesma cadeira.', preco_centavos: 5000, duracao_min: 60, ordem: 3 },
+  { slug: 'corte-navalhado', nome: 'Corte navalhado', descricao: 'Acabamento na navalha, pele limpa e risco no capricho.', tipo: 'principal', preco_centavos: 4500, duracao_min: 45, ordem: 1 },
+  { slug: 'corte-normal', nome: 'Corte normal', descricao: 'O corte do dia a dia, do jeito que você pedir.', tipo: 'principal', preco_centavos: 4000, duracao_min: 40, ordem: 2 },
+  { slug: 'corte-sobrancelha', nome: 'Corte + sobrancelha', descricao: 'Corte completo com a sobrancelha alinhada na navalha.', tipo: 'principal', preco_centavos: 4500, duracao_min: 45, ordem: 3 },
+  { slug: 'corte-sobrancelha-barba', nome: 'Corte + sobrancelha + barba', descricao: 'O pacote completo: cabelo, barba e sobrancelha.', tipo: 'principal', preco_centavos: 6000, duracao_min: 70, ordem: 4 },
+  { slug: 'corte-barba', nome: 'Corte + barba', descricao: 'Cabelo e barba feitos na mesma cadeira.', tipo: 'principal', preco_centavos: 5000, duracao_min: 60, ordem: 5 },
+  // Adicionais: somam ao corte (preço e tempo), nunca são marcados sozinhos
+  { slug: 'luzes', nome: 'Luzes', descricao: 'Mechas claras para dar destaque ao corte.', tipo: 'adicional', preco_centavos: 6000, duracao_min: 60, ordem: 10 },
+  { slug: 'boyzao', nome: 'Boyzão', descricao: 'Finalização no estilo boyzão.', tipo: 'adicional', preco_centavos: 3000, duracao_min: 30, ordem: 11 },
+  { slug: 'progressiva', nome: 'Progressiva', descricao: 'Alisa e tira o volume do cabelo.', tipo: 'adicional', preco_centavos: 8000, duracao_min: 90, ordem: 12 },
 ];
 
-// 0 = domingo. Terça a sexta 9h às 20h, sábado 8h às 18h. Domingo e segunda fechado.
+// 0 = domingo. Terça a sexta 9h às 20h, sábado 8h às 18h. Domingo e segunda: fechado.
 export const HORARIOS_INICIAIS = [
   [2, '09:00', '20:00'], [3, '09:00', '20:00'], [4, '09:00', '20:00'], [5, '09:00', '20:00'], [6, '08:00', '18:00'],
 ];
@@ -49,8 +56,8 @@ export async function semear() {
     // (um serviço removido pelo Fortão não volta sozinho quando o site reinicia)
     for (const s of SERVICOS_INICIAIS) {
       await consulta(
-        'INSERT IGNORE INTO servicos (slug, nome, descricao, preco_centavos, duracao_min, ordem) VALUES (?, ?, ?, ?, ?, ?)',
-        [s.slug, s.nome, s.descricao, s.preco_centavos, s.duracao_min, s.ordem],
+        'INSERT IGNORE INTO servicos (slug, nome, descricao, tipo, preco_centavos, duracao_min, ordem) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [s.slug, s.nome, s.descricao, s.tipo, s.preco_centavos, s.duracao_min, s.ordem],
       );
     }
   }

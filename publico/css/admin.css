@@ -34,6 +34,8 @@ a.resumo__item:active { transform: scale(0.98); }
 .item-bloqueio { grid-template-columns: 64px 1fr auto; align-items: center; background: repeating-linear-gradient(135deg, var(--sup) 0 10px, var(--sup-2) 10px 20px); }
 
 /* ---------- formulários e listas ---------- */
+.novo-adicionais { display: grid; gap: 8px; }
+.novo-adicionais legend { margin-bottom: 8px; font-size: 0.875rem; font-weight: 600; }
 .duas-colunas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .lista-admin { display: grid; gap: 8px; }
 .lista-admin li { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 14px 16px; border-radius: 18px; background: var(--sup); border: 1px solid var(--borda); }

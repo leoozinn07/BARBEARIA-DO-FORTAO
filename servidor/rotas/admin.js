@@ -2,12 +2,13 @@
 import { Router } from 'express';
 import { consulta, executar, umaLinha, transacao } from '../db/index.js';
 import { smtpConfigurado } from '../emails/fila.js';
+import { whatsappConfigurado } from '../whatsapp/fila.js';
 import { erros } from '../lib/erros.js';
 import * as tempo from '../lib/tempo.js';
 import { campos, validar, z } from '../lib/validacao.js';
 import { exigirAdmin } from '../middlewares/sessao.js';
 import {
-  STATUS_OCUPA, barbeiroPadrao, buscarAgendamento, cancelarAgendamento, criarAgendamento, definirStatus,
+  STATUS_OCUPA, anexarAdicionais, barbeiroPadrao, buscarAgendamento, cancelarAgendamento, criarAgendamento, definirStatus,
   horariosDoDia, paraAdmin, remarcarAgendamento,
 } from '../servicos/agenda.js';
 import { auditar } from '../servicos/auditoria.js';
@@ -32,6 +33,7 @@ rotasAdmin.get('/agenda', validar(z.object({ de: campos.dataISO, ate: campos.dat
   const bloqueios = await consulta('SELECT id, inicio, fim, motivo FROM bloqueios WHERE inicio < ? AND fim > ? ORDER BY inicio', [
     tempo.limitesDoDia(ate).ate, tempo.limitesDoDia(de).de,
   ]);
+  await anexarAdicionais(linhas);
   res.set('Cache-Control', 'no-store').json({ agendamentos: linhas.map(paraAdmin), bloqueios });
 }));
 
@@ -59,6 +61,7 @@ rotasAdmin.get('/resumo', validar(z.object({ data: campos.dataISO.optional() }),
     data: hoje, dia: normalizar(doDia), semana: normalizar(daSemana), mes: normalizar(doMes), clientes: Number(clientes.total),
     // Sem SMTP, os e-mails não saem de verdade: o painel mostra o aviso
     email_real: smtpConfigurado(),
+    whatsapp_real: whatsappConfigurado(),
   });
 }));
 
@@ -118,10 +121,16 @@ rotasAdmin.get('/rendimento', validar(z.object({ de: campos.dataISO, ate: campos
     anteriorAte = tempo.somarDias(anteriorDe, corridos - 1);
   }
 
-  const [linhas, anteriores] = await Promise.all([
+  const [linhas, extras, anteriores] = await Promise.all([
     consulta(
-      `SELECT a.inicio, a.status, a.preco_centavos, a.servico_id, s.nome AS servico
+      `SELECT a.id, a.inicio, a.status, a.preco_centavos, a.servico_id, s.nome AS servico
          FROM agendamentos a JOIN servicos s ON s.id = a.servico_id
+        WHERE a.inicio >= ? AND a.inicio < ?`,
+      [tempo.limitesDoDia(de).de, tempo.limitesDoDia(ate).ate],
+    ),
+    consulta(
+      `SELECT aa.agendamento_id, aa.servico_id, aa.preco_centavos, s.nome
+         FROM agendamento_adicionais aa JOIN agendamentos a ON a.id = aa.agendamento_id JOIN servicos s ON s.id = aa.servico_id
         WHERE a.inicio >= ? AND a.inicio < ?`,
       [tempo.limitesDoDia(de).de, tempo.limitesDoDia(ate).ate],
     ),
@@ -134,12 +143,24 @@ rotasAdmin.get('/rendimento', validar(z.object({ de: campos.dataISO, ate: campos
   const totais = somar(linhas);
   const anterior = somar(anteriores);
 
+  // Por serviço: o corte entra com o preço dele e cada adicional (luzes, boyzão...) aparece numa linha própria
+  const extrasDe = new Map();
+  for (const e of extras) {
+    if (!extrasDe.has(e.agendamento_id)) extrasDe.set(e.agendamento_id, []);
+    extrasDe.get(e.agendamento_id).push(e);
+  }
   const servicos = new Map();
+  const somarEm = (chave, servico, item) => {
+    if (!servicos.has(chave)) servicos.set(chave, { servico, lista: [] });
+    servicos.get(chave).lista.push(item);
+  };
   const grupos = new Map();
   for (const a of linhas) {
     if (a.status === 'concluido' || a.status === 'confirmado') {
-      if (!servicos.has(a.servico_id)) servicos.set(a.servico_id, { servico: a.servico, lista: [] });
-      servicos.get(a.servico_id).lista.push(a);
+      const doHorario = extrasDe.get(a.id) || [];
+      const base = a.preco_centavos - doHorario.reduce((t, e) => t + e.preco_centavos, 0);
+      somarEm(`s${a.servico_id}`, a.servico, { status: a.status, preco_centavos: base });
+      for (const e of doHorario) somarEm(`a${e.servico_id}`, `${e.nome} (adicional)`, { status: a.status, preco_centavos: e.preco_centavos });
     }
     const dia = tempo.dataLocalISO(new Date(a.inicio));
     const chave = porMes ? `${dia.slice(0, 7)}-01` : dia;
@@ -168,17 +189,23 @@ rotasAdmin.get('/rendimento', validar(z.object({ de: campos.dataISO, ate: campos
 }));
 
 // Horários livres para o admin (sem a antecedência mínima)
-rotasAdmin.get('/horarios', validar(z.object({ servico: campos.slug, data: campos.dataISO, ignorar: campos.codigo.optional() }), 'query'), rota(async (req, res) => {
-  let ignorarId = null;
-  if (req.dados.ignorar) ignorarId = (await umaLinha('SELECT id FROM agendamentos WHERE codigo = ?', [req.dados.ignorar]))?.id ?? null;
-  const { horarios } = await horariosDoDia({ slug: req.dados.servico, dataISO: req.dados.data, ignorarId, semAntecedencia: true });
+// Na remarcação (ignorar = código do horário), vale a duração do horário marcado, com os adicionais dele
+const esquemaHorariosAdmin = z.object({ servico: campos.slug, adicionais: campos.adicionaisQuery, data: campos.dataISO, ignorar: campos.codigo.optional() });
+rotasAdmin.get('/horarios', validar(esquemaHorariosAdmin, 'query'), rota(async (req, res) => {
+  const atual = req.dados.ignorar ? await umaLinha('SELECT id, duracao_min FROM agendamentos WHERE codigo = ?', [req.dados.ignorar]) : null;
+  const { horarios } = await horariosDoDia({
+    slug: req.dados.servico, adicionais: req.dados.adicionais, dataISO: req.dados.data,
+    ignorarId: atual?.id ?? null, duracaoFixa: atual?.duracao_min ?? null, semAntecedencia: true,
+  });
   res.set('Cache-Control', 'no-store').json({ horarios });
 }));
 
 // ------------------------------------------------------------------ ações nos agendamentos
 const esquemaNovo = z.object({
   servico: campos.slug,
+  adicionais: campos.adicionais,
   inicio: campos.instante,
+  whatsapp: z.boolean().optional().default(false),
   email_cliente: campos.email.optional(),
   nome: campos.nome.optional(),
   telefone: campos.telefone,
@@ -196,10 +223,13 @@ rotasAdmin.post('/agendamentos', validar(esquemaNovo), rota(async (req, res) => 
     cliente,
     avulso: cliente ? null : { nome: d.nome, telefone: d.telefone ?? null },
     slug: d.servico,
+    adicionais: d.adicionais,
     inicio: d.inicio,
     origem: 'admin',
     observacao: d.observacao || null,
+    whatsapp: d.whatsapp,
   });
+  await anexarAdicionais([ag]);
   await registrar(req, 'admin_criou_agendamento', ag.codigo);
   res.status(201).json({ agendamento: paraAdmin(ag) });
 }));
@@ -210,6 +240,7 @@ rotasAdmin.post('/agendamentos/:codigo/status', porCodigo, rota(async (req, res)
   const r = z.object({ status: z.enum(['concluido', 'faltou', 'confirmado']) }).safeParse(req.body);
   if (!r.success) throw erros.validacao({ status: 'Status inválido.' });
   const ag = await definirStatus({ codigo: req.dados.codigo, status: r.data.status });
+  await anexarAdicionais([ag]);
   await registrar(req, 'admin_status', ag.codigo, { status: r.data.status });
   res.json({ agendamento: paraAdmin(ag) });
 }));
@@ -219,13 +250,14 @@ rotasAdmin.post('/agendamentos/:codigo/cancelar', porCodigo, rota(async (req, re
   if (!r.success) throw erros.validacao({ motivo: 'Motivo muito longo.' });
   const ag = await cancelarAgendamento({ codigo: req.dados.codigo, porAdmin: true, motivo: r.data.motivo || null });
   await registrar(req, 'admin_cancelou', ag.codigo);
-  res.json({ agendamento: paraAdmin(await buscarAgendamento('a.id = ?', [ag.id])) });
+  res.json({ agendamento: paraAdmin((await anexarAdicionais([await buscarAgendamento('a.id = ?', [ag.id])]))[0]) });
 }));
 
 rotasAdmin.post('/agendamentos/:codigo/remarcar', porCodigo, rota(async (req, res) => {
   const r = z.object({ inicio: campos.instante }).safeParse(req.body);
   if (!r.success) throw erros.validacao({ inicio: 'Horário inválido.' });
   const ag = await remarcarAgendamento({ codigo: req.dados.codigo, inicio: r.data.inicio, porAdmin: true });
+  await anexarAdicionais([ag]);
   await registrar(req, 'admin_remarcou', ag.codigo);
   res.json({ agendamento: paraAdmin(ag) });
 }));
@@ -264,24 +296,26 @@ rotasAdmin.delete('/bloqueios/:id', validar(z.object({ id: z.coerce.number().int
 }));
 
 // ------------------------------------------------------------------ serviços
+// tipo: "principal" é o corte que o cliente escolhe; "adicional" soma ao corte (luzes, boyzão, progressiva...)
 const esquemaServico = z.object({
   nome: z.string().trim().min(2).max(80),
   descricao: z.string().trim().max(255).optional().default(''),
+  tipo: z.enum(['principal', 'adicional']).optional().default('principal'),
   preco_centavos: z.number().int().min(0).max(1_000_000),
-  duracao_min: z.number().int().min(10).max(480),
+  duracao_min: z.number().int().min(5).max(480),
   ativo: z.boolean().optional().default(true),
   ordem: z.number().int().min(0).max(999).optional().default(0),
 });
 
 rotasAdmin.get('/servicos', rota(async (_req, res) => {
-  res.json({ servicos: await consulta('SELECT id, slug, nome, descricao, preco_centavos, duracao_min, ativo, ordem FROM servicos ORDER BY ordem, id') });
+  res.json({ servicos: await consulta("SELECT id, slug, nome, descricao, tipo, preco_centavos, duracao_min, ativo, ordem FROM servicos ORDER BY tipo = 'adicional', ordem, id") });
 }));
 
 rotasAdmin.post('/servicos', validar(esquemaServico.extend({ slug: campos.slug })), rota(async (req, res) => {
   const d = req.dados;
   try {
-    const r = await consulta('INSERT INTO servicos (slug, nome, descricao, preco_centavos, duracao_min, ativo, ordem) VALUES (?, ?, ?, ?, ?, ?, ?)', [
-      d.slug, d.nome, d.descricao, d.preco_centavos, d.duracao_min, d.ativo ? 1 : 0, d.ordem,
+    const r = await consulta('INSERT INTO servicos (slug, nome, descricao, tipo, preco_centavos, duracao_min, ativo, ordem) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [
+      d.slug, d.nome, d.descricao, d.tipo, d.preco_centavos, d.duracao_min, d.ativo ? 1 : 0, d.ordem,
     ]);
     await registrar(req, 'admin_criou_servico', d.slug);
     res.status(201).json({ id: r.insertId });
@@ -295,8 +329,8 @@ rotasAdmin.put('/servicos/:id', validar(z.object({ id: z.coerce.number().int().p
   const r = esquemaServico.safeParse(req.body);
   if (!r.success) throw erros.validacao({ servico: 'Dados do serviço inválidos.' });
   const d = r.data;
-  const out = await consulta('UPDATE servicos SET nome = ?, descricao = ?, preco_centavos = ?, duracao_min = ?, ativo = ?, ordem = ? WHERE id = ?', [
-    d.nome, d.descricao, d.preco_centavos, d.duracao_min, d.ativo ? 1 : 0, d.ordem, req.dados.id,
+  const out = await consulta('UPDATE servicos SET nome = ?, descricao = ?, tipo = ?, preco_centavos = ?, duracao_min = ?, ativo = ?, ordem = ? WHERE id = ?', [
+    d.nome, d.descricao, d.tipo, d.preco_centavos, d.duracao_min, d.ativo ? 1 : 0, d.ordem, req.dados.id,
   ]);
   if (!out.affectedRows) throw erros.naoEncontrado('Serviço não encontrado.');
   await registrar(req, 'admin_editou_servico', String(req.dados.id), d);

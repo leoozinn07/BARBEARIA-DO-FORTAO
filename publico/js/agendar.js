@@ -1,8 +1,8 @@
 // /agendar: o mesmo componente da página inicial, em tela cheia. Sem login, guarda a escolha e leva para entrar.
-import { post } from './api.js';
-import { iniciarCasca } from './casca.js';
-import { esquecerEscolha, lerEscolhaGuardada, montarAgendamento } from './agendamento.js';
-import { abrirFolha, h, icone, quando, reais } from './ui.js';
+import { iniciarCasca, obterConfig } from './casca.js';
+import { lerEscolhaGuardada, montarAgendamento } from './agendamento.js';
+import { marcarComConfirmacao } from './confirmar.js';
+import { h, icone } from './ui.js';
 
 const $ = (s) => document.querySelector(s);
 const { usuario } = await iniciarCasca();
@@ -16,18 +16,15 @@ if (usuario && escolha?.inicio) {
 
 montarAgendamento($('[data-agendamento]'), {
   inicial: escolha || {},
-  async aoConfirmar({ servico, inicio }) {
+  async aoConfirmar({ servico, adicionais, inicio }) {
     if (!usuario) {
       location.href = `/entrar?volta=${encodeURIComponent('/agendar')}`;
       return;
     }
-    const { agendamento } = await post('/agendamentos', { servico: servico.slug, inicio });
-    esquecerEscolha();
-    $('[data-agendar-aviso]').hidden = true;
-    $('[data-sucesso-texto]').textContent = `${agendamento.servico}, ${quando(agendamento.inicio)}. Valor: ${reais(agendamento.preco_centavos)}, pago na barbearia.`;
-    const folha = $('[data-folha-sucesso]');
-    abrirFolha(folha);
-    folha.addEventListener('close', () => { location.href = '/conta#horarios'; }, { once: true });
+    const ag = await marcarComConfirmacao({
+      servico, adicionais, inicio, usuario, config: await obterConfig(), aoFechar: () => { location.href = '/conta#horarios'; },
+    });
+    if (ag) $('[data-agendar-aviso]').hidden = true;
   },
 });
 

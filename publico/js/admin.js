@@ -43,6 +43,7 @@ async function carregarResumo() {
   try {
     const r = await get(`/admin/resumo?data=${dia}`);
     $('[data-aviso-email]').hidden = r.email_real;
+    $('[data-aviso-whatsapp]').hidden = r.whatsapp_real;
     const ativos = (x) => x.total - x.cancelados;
     $('[data-resumo]').replaceChildren(
       h('div', { class: 'resumo__item' }, h('small', {}, dia === hojeISO() ? 'Hoje' : 'Neste dia'), h('b', {}, String(ativos(r.dia))), h('span', {}, `horários, ${reais(r.dia.previsto_centavos)}`)),
@@ -80,7 +81,9 @@ function itemAgendamento(ag) {
   return h('li', { class: 'item-agenda', 'data-status': ag.status },
     h('div', { class: 'item-agenda__hora' }, h('b', {}, hora(ag.inicio)), h('small', {}, `até ${hora(ag.fim)}`)),
     h('div', { class: 'item-agenda__corpo' },
-      h('p', { class: 'item-agenda__nome' }, ag.cliente_nome, h('span', { class: `selo selo--${ag.status}` }, STATUS[ag.status]), ag.origem === 'admin' ? h('span', { class: 'selo' }, 'Balcão') : null),
+      h('p', { class: 'item-agenda__nome' }, ag.cliente_nome, h('span', { class: `selo selo--${ag.status}` }, STATUS[ag.status]),
+        ag.origem === 'admin' ? h('span', { class: 'selo' }, 'Balcão') : null,
+        ag.presenca_confirmada && ag.status === 'confirmado' ? h('span', { class: 'selo selo--ouro' }, icone('whatsapp-logo'), 'Confirmou') : null),
       h('p', { class: 'item-agenda__detalhe' },
         h('span', {}, `${ag.servico}, ${reais(ag.preco_centavos)}`),
         ag.cliente_telefone ? h('a', { href: whatsapp(ag.cliente_telefone), target: '_blank', rel: 'noopener' }, icone('whatsapp-logo'), ` ${telefoneBonito(ag.cliente_telefone)}`) : null,
@@ -124,10 +127,11 @@ $('[data-dia-hoje]').addEventListener('click', () => { dia = hojeISO(); carregar
 $('[data-dia]').addEventListener('change', (e) => { if (e.target.value) { dia = e.target.value; carregarAgenda(); } });
 
 // ---------------------------------------------------------------- grade de horários (novo e remarcar)
-async function desenharHorarios(caixa, { servico, data, ignorar }) {
+async function desenharHorarios(caixa, { servico, data, ignorar, adicionais = [] }) {
   caixa.replaceChildren(h('div', { class: 'esqueleto ag-hora-esq' }), h('div', { class: 'esqueleto ag-hora-esq' }));
   try {
-    const { horarios } = await get(`/admin/horarios?servico=${servico}&data=${data}${ignorar ? `&ignorar=${ignorar}` : ''}`);
+    const extras = adicionais.length ? `&adicionais=${encodeURIComponent(adicionais.join(','))}` : '';
+    const { horarios } = await get(`/admin/horarios?servico=${servico}${extras}&data=${data}${ignorar ? `&ignorar=${ignorar}` : ''}`);
     caixa.replaceChildren(...(horarios.length ? horarios.map((x) => h('label', { class: 'ag-hora' }, h('input', { type: 'radio', name: 'inicio', value: x.inicio }), x.hora))
       : [h('p', { class: 'subtitulo' }, 'Sem horário livre nesse dia.')]));
   } catch (e) {
@@ -142,13 +146,22 @@ async function abrirNovo() {
   limparErros(formNovo);
   formNovo.reset();
   servicos = servicos.length ? servicos : (await get('/admin/servicos')).servicos;
-  $('[data-novo-servico]').replaceChildren(...servicos.filter((s) => s.ativo).map((s) => h('option', { value: s.slug }, `${s.nome} (${reais(s.preco_centavos)}, ${s.duracao_min} min)`)));
+  const ativos = servicos.filter((s) => s.ativo);
+  $('[data-novo-servico]').replaceChildren(...ativos.filter((s) => s.tipo === 'principal').map((s) => h('option', { value: s.slug }, `${s.nome} (${reais(s.preco_centavos)}, ${s.duracao_min} min)`)));
+  const extras = ativos.filter((s) => s.tipo === 'adicional');
+  $('[data-novo-adicionais-grupo]').hidden = !extras.length;
+  $('[data-novo-adicionais]').replaceChildren(...extras.map((a) => h('label', { class: 'ag-adicional' },
+    h('input', { type: 'checkbox', name: 'adicional', value: a.slug, onchange: () => atualizarNovo() }),
+    h('span', { class: 'ag-adicional__nome' }, a.nome),
+    h('span', { class: 'ag-adicional__info' }, `+ ${reais(a.preco_centavos)} · ${a.duracao_min} min`),
+  )));
   $('[data-novo-dia]').value = dia;
   alternarTipo();
   atualizarNovo();
   abrirFolha(folhaNovo);
 }
-const atualizarNovo = () => desenharHorarios($('[data-novo-horarios]'), { servico: formNovo.elements.servico.value, data: formNovo.elements.dia.value });
+const adicionaisDoNovo = () => [...formNovo.querySelectorAll('input[name="adicional"]:checked')].map((i) => i.value);
+const atualizarNovo = () => desenharHorarios($('[data-novo-horarios]'), { servico: formNovo.elements.servico.value, data: formNovo.elements.dia.value, adicionais: adicionaisDoNovo() });
 function alternarTipo() {
   const conta = formNovo.elements.tipo.value === 'conta';
   $('[data-campos-avulso]').hidden = conta;
@@ -167,7 +180,7 @@ formNovo.addEventListener('submit', async (ev) => {
   if (!inicio) { mostrarErros(formNovo, { campos: { inicio: 'Escolha um horário.' } }); return; }
   ocupado(botao, true);
   try {
-    const corpo = { servico: f.servico.value, inicio, observacao: f.observacao.value || undefined };
+    const corpo = { servico: f.servico.value, adicionais: adicionaisDoNovo(), inicio, observacao: f.observacao.value || undefined, whatsapp: f.whatsapp.checked };
     if (f.tipo.value === 'conta') corpo.email_cliente = f.email_cliente.value; else Object.assign(corpo, { nome: f.nome.value, telefone: f.telefone.value });
     const { agendamento } = await post('/admin/agendamentos', corpo);
     folhaNovo.close();
@@ -276,12 +289,12 @@ async function removerBloqueio(id) {
 // ---------------------------------------------------------------- serviços
 async function carregarServicos() {
   servicos = (await get('/admin/servicos')).servicos;
-  $('[data-servicos]').replaceChildren(...servicos.map((s) => {
+  const cartao = (s) => {
     const form = h('form', { class: 'servico-admin', novalidate: true },
       h('div', { class: 'campo' }, h('label', { for: `s-nome-${s.id}` }, 'Nome'), h('input', { id: `s-nome-${s.id}`, name: 'nome', value: s.nome, maxlength: 80 })),
       h('div', { class: 'duas-colunas' },
         h('div', { class: 'campo' }, h('label', { for: `s-preco-${s.id}` }, 'Preço (R$)'), h('input', { id: `s-preco-${s.id}`, name: 'preco', type: 'number', min: 0, step: '0.5', inputmode: 'decimal', value: s.preco_centavos / 100 })),
-        h('div', { class: 'campo' }, h('label', { for: `s-dur-${s.id}` }, 'Duração (min)'), h('input', { id: `s-dur-${s.id}`, name: 'duracao', type: 'number', min: 10, step: 5, inputmode: 'numeric', value: s.duracao_min })),
+        h('div', { class: 'campo' }, h('label', { for: `s-dur-${s.id}` }, s.tipo === 'adicional' ? 'Tempo a mais (min)' : 'Duração (min)'), h('input', { id: `s-dur-${s.id}`, name: 'duracao', type: 'number', min: 5, step: 5, inputmode: 'numeric', value: s.duracao_min })),
       ),
       h('div', { class: 'campo' }, h('label', { for: `s-desc-${s.id}` }, 'Descrição'), h('input', { id: `s-desc-${s.id}`, name: 'descricao', value: s.descricao, maxlength: 255 })),
       h('div', { class: 'servico-admin__rodape' },
@@ -299,14 +312,18 @@ async function carregarServicos() {
       ocupado(botao, true);
       try {
         await put(`/admin/servicos/${s.id}`, {
-          nome: f.nome.value, descricao: f.descricao.value, preco_centavos: Math.round(Number(f.preco.value) * 100),
+          nome: f.nome.value, descricao: f.descricao.value, tipo: s.tipo, preco_centavos: Math.round(Number(f.preco.value) * 100),
           duracao_min: Number(f.duracao.value), ativo: f.ativo.checked, ordem: s.ordem,
         });
+        servicos = [];
         toast({ titulo: 'Serviço salvo', texto: `${f.nome.value}: ${reais(Math.round(Number(f.preco.value) * 100))}.` });
       } catch (e) { toastErro(e); } finally { ocupado(botao, false); }
     });
     return form;
-  }));
+  };
+  $('[data-servicos]').replaceChildren(...servicos.filter((s) => s.tipo !== 'adicional').map(cartao));
+  const extras = servicos.filter((s) => s.tipo === 'adicional');
+  $('[data-adicionais]').replaceChildren(...(extras.length ? extras.map(cartao) : [h('p', { class: 'subtitulo' }, 'Nenhum adicional. Crie um logo abaixo, escolhendo o tipo "Adicional".')]));
 }
 
 async function removerServico(s) {
@@ -328,12 +345,16 @@ formNovoServico.addEventListener('submit', async (ev) => {
   limparErros(formNovoServico);
   ocupado(botao, true);
   try {
+    const tipo = f.tipo.value;
+    const atuais = (await get('/admin/servicos')).servicos;
+    const ordem = Math.max(0, ...atuais.filter((s) => s.tipo === tipo).map((s) => s.ordem)) + 1;
     await post('/admin/servicos', {
-      slug, nome: f.nome.value, descricao: f.descricao.value, preco_centavos: Math.round(Number(f.preco.value) * 100),
-      duracao_min: Number(f.duracao.value), ativo: true, ordem: servicos.length + 1,
+      slug, nome: f.nome.value, descricao: f.descricao.value, tipo, preco_centavos: Math.round(Number(f.preco.value) * 100),
+      duracao_min: Number(f.duracao.value), ativo: true, ordem: tipo === 'adicional' ? Math.max(ordem, 10) : ordem,
     });
     formNovoServico.reset();
-    toast({ titulo: 'Serviço criado', texto: 'Ele já aparece para os clientes.' });
+    toast({ titulo: tipo === 'adicional' ? 'Adicional criado' : 'Serviço criado', texto: 'Já aparece para os clientes.' });
+    servicos = [];
     carregarServicos();
   } catch (e) { mostrarErros(formNovoServico, e); } finally { ocupado(botao, false); }
 });

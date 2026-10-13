@@ -47,14 +47,18 @@ O comando mostra a senha gerada uma única vez. Entre em `https://seu-dominio/en
 
 Enquanto o SMTP não estiver configurado, o painel mostra um aviso e os avisos aparecem só no sino do site.
 
-## 5. Segurança do banco
+## 5. WhatsApp
+
+Confirmação, lembretes e o robô que responde 1 e 2 usam a API oficial do WhatsApp. O passo a passo (conta Meta, número, modelos e webhook) está em [whatsapp.md](whatsapp.md). Sem isso, o site funciona e o painel avisa que o WhatsApp ainda não está ligado.
+
+## 6. Segurança do banco
 
 - O MySQL do `docker-compose.yml` não abre porta para a internet: só o site, dentro do Docker, fala com ele.
 - O site usa o usuário `fortao`, com acesso só ao banco `fortao`. A senha do `root` fica guardada para manutenção.
 - Senhas, tokens de sessão e links de e-mail nunca ficam em texto puro no banco (argon2id e SHA-256).
 - Nunca suba o `.env` para o GitHub.
 
-## 6. Cópia de segurança
+## 7. Cópia de segurança
 
 Rode todo dia, por exemplo com o `cron` do servidor:
 
@@ -64,7 +68,7 @@ docker compose exec -T banco sh -c 'mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --
 
 Guarde as cópias fora do servidor (Google Drive, outro provedor).
 
-## 7. Atualizar o site
+## 8. Atualizar o site
 
 ```bash
 git pull

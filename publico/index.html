@@ -3,7 +3,7 @@
 <head>
   <!-- incluir:cabeca -->
   <title>Barbearia do Fortão | Corte com hora marcada na Cohab 5, São Paulo</title>
-  <meta name="description" content="Marque seu corte na Barbearia do Fortão, na Cohab 5 em São Paulo. Corte Fortão R$ 40, corte e sobrancelha R$ 45, corte e barba R$ 50. Sem fila, com lembrete por e-mail. Pagamento na barbearia.">
+  <meta name="description" content="Marque seu corte na Barbearia do Fortão, na Cohab 5 em São Paulo. Corte navalhado, corte normal, corte com sobrancelha e barba, luzes e progressiva. Lembrete no WhatsApp e pagamento na barbearia. Fechado domingo e segunda.">
   <link rel="canonical" href="/">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="pt_BR">
@@ -21,12 +21,14 @@
     "@type": "BarberShop",
     "name": "Barbearia do Fortão",
     "image": "/img/og-barbearia.jpg",
-    "priceRange": "R$ 40 - R$ 50",
+    "priceRange": "R$ 40 - R$ 60",
     "address": { "@type": "PostalAddress", "addressLocality": "São Paulo", "addressRegion": "SP", "addressCountry": "BR", "streetAddress": "Cohab 5" },
     "makesOffer": [
-      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Corte Fortão" }, "price": "40.00", "priceCurrency": "BRL" },
-      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Corte e sobrancelha" }, "price": "45.00", "priceCurrency": "BRL" },
-      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Corte e barba" }, "price": "50.00", "priceCurrency": "BRL" }
+      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Corte navalhado" }, "price": "45.00", "priceCurrency": "BRL" },
+      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Corte normal" }, "price": "40.00", "priceCurrency": "BRL" },
+      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Corte + sobrancelha" }, "price": "45.00", "priceCurrency": "BRL" },
+      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Corte + sobrancelha + barba" }, "price": "60.00", "priceCurrency": "BRL" },
+      { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Corte + barba" }, "price": "50.00", "priceCurrency": "BRL" }
     ]
   }
   </script>
@@ -60,10 +62,20 @@
       <h2 class="titulo" id="servicos-titulo" data-revelar>Tabela da casa</h2>
       <p class="subtitulo" data-revelar>Preço fechado, pago na barbearia. Você vê o valor antes de confirmar.</p>
       <ul class="tabela" data-tabela>
-        <li class="tabela__item"><span class="tabela__nome">Corte Fortão</span><span class="tabela__preco">R$ 40</span><span class="tabela__desc">O corte da casa, do jeito que você pedir.</span></li>
-        <li class="tabela__item"><span class="tabela__nome">Corte e sobrancelha</span><span class="tabela__preco">R$ 45</span><span class="tabela__desc">Corte completo com a sobrancelha alinhada.</span></li>
-        <li class="tabela__item"><span class="tabela__nome">Corte e barba</span><span class="tabela__preco">R$ 50</span><span class="tabela__desc">Cabelo e barba feitos na mesma cadeira.</span></li>
+        <li class="tabela__item"><span class="tabela__nome">Corte navalhado</span><span class="tabela__preco">R$ 45</span><span class="tabela__desc">Acabamento na navalha, pele limpa e risco no capricho.</span></li>
+        <li class="tabela__item"><span class="tabela__nome">Corte normal</span><span class="tabela__preco">R$ 40</span><span class="tabela__desc">O corte do dia a dia, do jeito que você pedir.</span></li>
+        <li class="tabela__item"><span class="tabela__nome">Corte + sobrancelha</span><span class="tabela__preco">R$ 45</span><span class="tabela__desc">Corte completo com a sobrancelha alinhada na navalha.</span></li>
+        <li class="tabela__item"><span class="tabela__nome">Corte + sobrancelha + barba</span><span class="tabela__preco">R$ 60</span><span class="tabela__desc">O pacote completo: cabelo, barba e sobrancelha.</span></li>
+        <li class="tabela__item"><span class="tabela__nome">Corte + barba</span><span class="tabela__preco">R$ 50</span><span class="tabela__desc">Cabelo e barba feitos na mesma cadeira.</span></li>
       </ul>
+      <div class="tabela-adicionais" data-adicionais-bloco>
+        <h3 class="tabela-adicionais__titulo">Adicionais <span>para somar ao corte</span></h3>
+        <ul class="tabela" data-tabela-adicionais>
+          <li class="tabela__item tabela__item--adicional"><span class="tabela__nome">Luzes</span><span class="tabela__preco">+ R$ 60</span><span class="tabela__desc">Mechas claras para dar destaque ao corte.</span></li>
+          <li class="tabela__item tabela__item--adicional"><span class="tabela__nome">Boyzão</span><span class="tabela__preco">+ R$ 30</span><span class="tabela__desc">Finalização no estilo boyzão.</span></li>
+          <li class="tabela__item tabela__item--adicional"><span class="tabela__nome">Progressiva</span><span class="tabela__preco">+ R$ 80</span><span class="tabela__desc">Alisa e tira o volume do cabelo.</span></li>
+        </ul>
+      </div>
     </section>
 
     <!-- O FORTÃO -->
@@ -95,9 +107,9 @@
     <section class="container secao" id="como" aria-labelledby="como-titulo">
       <h2 class="titulo" id="como-titulo" data-revelar>Depois que você marca</h2>
       <ul class="passos">
-        <li class="passo" data-revelar data-i="0"><span class="passo__icone"><i class="ph ph-envelope-simple" aria-hidden="true"></i></span><div><h3>E-mail de confirmação</h3><p>Chega na hora, com dia, horário, valor e convite para a agenda do celular.</p></div></li>
-        <li class="passo" data-revelar data-i="1"><span class="passo__icone"><i class="ph ph-bell-ringing" aria-hidden="true"></i></span><div><h3>Lembrete antes do corte</h3><p>Um dia antes e duas horas antes, por e-mail e nos avisos da sua conta.</p></div></li>
-        <li class="passo" data-revelar data-i="2"><span class="passo__icone"><i class="ph ph-arrows-left-right" aria-hidden="true"></i></span><div><h3>Remarcar é fácil</h3><p>Mudou o plano? Troque o horário pelo site até 2 horas antes.</p></div></li>
+        <li class="passo" data-revelar data-i="0"><span class="passo__icone"><i class="ph ph-check-circle" aria-hidden="true"></i></span><div><h3>Confirmação na hora</h3><p>No WhatsApp e no e-mail, com dia, horário, valor e o lembrete para a agenda do celular.</p></div></li>
+        <li class="passo" data-revelar data-i="1"><span class="passo__icone"><i class="ph ph-whatsapp-logo" aria-hidden="true"></i></span><div><h3>Lembrete no WhatsApp</h3><p>Um dia antes e duas horas antes. Responda 1 para confirmar ou 2 para cancelar.</p></div></li>
+        <li class="passo" data-revelar data-i="2"><span class="passo__icone"><i class="ph ph-arrows-left-right" aria-hidden="true"></i></span><div><h3>Mudou o plano?</h3><p>Cancele ou remarque até 2 horas antes, pelo site ou pelo WhatsApp. Domingo e segunda a barbearia fecha.</p></div></li>
       </ul>
     </section>
 
@@ -126,18 +138,6 @@
 
   <!-- incluir:rodape -->
   <!-- incluir:abas -->
-
-  <!-- Folha: horário marcado -->
-  <dialog class="folha" data-folha-sucesso aria-labelledby="sucesso-titulo">
-    <div class="folha__alca" aria-hidden="true"></div>
-    <div class="folha__corpo">
-      <div class="sucesso__icone"><i class="ph-fill ph-check-circle" aria-hidden="true"></i></div>
-      <h2 class="titulo" id="sucesso-titulo">Fechou! Horário marcado.</h2>
-      <p class="subtitulo" data-sucesso-texto></p>
-      <p class="subtitulo">A confirmação chegou no seu e-mail. Vamos te lembrar antes.</p>
-      <a class="botao botao--cheio botao--bloco" href="/conta#horarios">Ver meus horários</a>
-    </div>
-  </dialog>
 
   <!-- Folha: precisa entrar -->
   <dialog class="folha" data-folha-entrar aria-labelledby="entrar-titulo">

@@ -36,7 +36,12 @@
 .tabela__nome { grid-area: nome; font-size: 1.125rem; font-weight: 650; letter-spacing: -0.02em; }
 .tabela__preco { grid-area: preco; font-size: 1.375rem; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--ouro); }
 .tabela__desc { grid-area: desc; color: var(--texto-2); font-size: 0.9375rem; }
-.tabela__duracao { color: var(--texto-2); font-weight: 500; font-size: 0.8125rem; margin-left: 6px; letter-spacing: 0; }
+.tabela-adicionais { margin-top: 26px; }
+.tabela-adicionais__titulo { font-size: 1.125rem; font-weight: 650; letter-spacing: -0.02em; }
+.tabela-adicionais__titulo span { font-weight: 400; color: var(--texto-2); font-size: 0.9375rem; letter-spacing: 0; margin-left: 4px; }
+.tabela-adicionais .tabela { margin-top: 8px; }
+.tabela__item--adicional .tabela__preco { font-size: 1.125rem; }
+.tabela__duracao { white-space: nowrap; color: var(--texto-2); font-weight: 500; font-size: 0.8125rem; margin-left: 6px; letter-spacing: 0; }
 
 /* ---------- Fortão (ilustração da bancada, sem foto) ---------- */
 .fortao { border-radius: var(--raio); overflow: hidden; background: var(--sup); border: 1px solid var(--borda); }

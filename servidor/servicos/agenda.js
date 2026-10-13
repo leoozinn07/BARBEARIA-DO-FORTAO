@@ -16,15 +16,49 @@ export const STATUS_OCUPA = ['confirmado', 'concluido', 'faltou'];
 
 export async function listarServicos({ incluirInativos = false } = {}) {
   return consulta(
-    `SELECT id, slug, nome, descricao, preco_centavos, duracao_min, ativo, ordem FROM servicos
-      ${incluirInativos ? '' : 'WHERE ativo = 1'} ORDER BY ordem, id`,
+    `SELECT id, slug, nome, descricao, tipo, preco_centavos, duracao_min, ativo, ordem FROM servicos
+      ${incluirInativos ? '' : 'WHERE ativo = 1'} ORDER BY tipo = 'adicional', ordem, id`,
   );
 }
 
+/** O corte em si (serviço principal). Adicional sozinho não se marca. */
 async function servicoAtivo(slug, conn) {
-  const s = await umaLinha('SELECT id, slug, nome, preco_centavos, duracao_min FROM servicos WHERE slug = ? AND ativo = 1', [slug], conn);
+  const s = await umaLinha(
+    "SELECT id, slug, nome, preco_centavos, duracao_min FROM servicos WHERE slug = ? AND ativo = 1 AND tipo = 'principal'",
+    [slug],
+    conn,
+  );
   if (!s) throw erros.requisicao('Esse serviço não está disponível.', { codigo: 'servico_invalido' });
   return s;
+}
+
+export const MAX_ADICIONAIS = 5;
+
+/** Adicionais escolhidos (luzes, boyzão...), na ordem do catálogo. */
+async function adicionaisAtivos(slugs = [], conn) {
+  const unicos = [...new Set(slugs)];
+  if (!unicos.length) return [];
+  if (unicos.length > MAX_ADICIONAIS) throw erros.validacao({ adicionais: `Escolha até ${MAX_ADICIONAIS} adicionais.` });
+  const lista = await consulta(
+    "SELECT id, slug, nome, preco_centavos, duracao_min FROM servicos WHERE slug IN (?) AND ativo = 1 AND tipo = 'adicional' ORDER BY ordem, id",
+    [unicos],
+    conn,
+  );
+  if (lista.length !== unicos.length) throw erros.requisicao('Um dos adicionais não está mais disponível.', { codigo: 'adicional_invalido' });
+  return lista;
+}
+
+/** Corte + adicionais: nome ("Corte normal + Luzes"), preço e duração somados. */
+export async function montarPacote(slug, adicionaisSlugs = [], conn) {
+  const servico = await servicoAtivo(slug, conn);
+  const adicionais = await adicionaisAtivos(adicionaisSlugs, conn);
+  return {
+    servico,
+    adicionais,
+    nome: [servico.nome, ...adicionais.map((a) => a.nome)].join(' + ').slice(0, 200),
+    preco_centavos: servico.preco_centavos + adicionais.reduce((t, a) => t + a.preco_centavos, 0),
+    duracao_min: servico.duracao_min + adicionais.reduce((t, a) => t + a.duracao_min, 0),
+  };
 }
 
 export async function barbeiroPadrao(conn) {
@@ -84,21 +118,23 @@ function conferirJanela(dataISO, regras, agora = new Date()) {
   if (dataISO > ultimo) throw erros.requisicao(`A agenda abre só para os próximos ${regras.janela_dias} dias.`, { codigo: 'fora_da_janela' });
 }
 
-export async function horariosDoDia({ slug, dataISO, ignorarId = null, semAntecedencia = false }, conn) {
+/** `duracaoFixa`: na remarcação, vale a duração do horário já marcado (com os adicionais dele). */
+export async function horariosDoDia({ slug, adicionais = [], dataISO, ignorarId = null, semAntecedencia = false, duracaoFixa = null }, conn) {
   const { agenda: regras } = await lerConfiguracoes();
   conferirJanela(dataISO, regras);
-  const servico = await servicoAtivo(slug, conn);
+  const pacote = await montarPacote(slug, adicionais, conn);
   const barbeiroId = await barbeiroPadrao(conn);
   const faixas = await faixasDoBarbeiro(barbeiroId, conn);
   const { de, ate } = tempo.limitesDoDia(dataISO);
   const ocupados = await ocupacoes(barbeiroId, de, ate, conn, ignorarId);
-  return { servico, horarios: calcularLivres({ dataISO, duracaoMin: servico.duracao_min, faixas, ocupados, regras, semAntecedencia }) };
+  const duracaoMin = duracaoFixa ?? pacote.duracao_min;
+  return { pacote, horarios: calcularLivres({ dataISO, duracaoMin, faixas, ocupados, regras, semAntecedencia }) };
 }
 
 /** Próximos dias com a contagem de horários livres (para o seletor de dias). Duas consultas para a janela toda. */
-export async function diasDisponiveis({ slug }) {
+export async function diasDisponiveis({ slug, adicionais = [] }) {
   const { agenda: regras } = await lerConfiguracoes();
-  const servico = await servicoAtivo(slug);
+  const servico = await montarPacote(slug, adicionais);
   const barbeiroId = await barbeiroPadrao();
   const faixas = await faixasDoBarbeiro(barbeiroId);
   const hoje = tempo.dataLocalISO(new Date());
@@ -111,7 +147,7 @@ export async function diasDisponiveis({ slug }) {
     const livres = aberto ? calcularLivres({ dataISO: data, duracaoMin: servico.duracao_min, faixas, ocupados, regras }) : [];
     dias.push({ data, dia_semana: tempo.diaSemana(data), aberto, livres: livres.length, primeiro: livres[0]?.hora ?? null });
   }
-  return { servico, dias };
+  return { pacote: servico, dias };
 }
 
 // ----------------------------------------------------------------- escrita
@@ -156,8 +192,11 @@ function lembretesIniciais(inicio, agora = Date.now()) {
 /**
  * Marca um horário.
  * cliente: { id, nome, telefone } de um usuário logado, ou avulso: { nome, telefone } (só o admin).
+ * adicionais: slugs dos serviços adicionais. whatsapp: manda confirmação e lembretes no WhatsApp do telefone.
  */
-export async function criarAgendamento({ cliente = null, avulso = null, slug, inicio: inicioISO, origem = 'site', observacao = null }) {
+export async function criarAgendamento({
+  cliente = null, avulso = null, slug, adicionais: adicionaisSlugs = [], inicio: inicioISO, origem = 'site', observacao = null, whatsapp = false,
+}) {
   const { agenda: regras } = await lerConfiguracoes();
   const inicio = new Date(inicioISO);
   if (Number.isNaN(inicio.getTime())) throw erros.validacao({ inicio: 'Horário inválido.' });
@@ -174,13 +213,13 @@ export async function criarAgendamento({ cliente = null, avulso = null, slug, in
     }
   }
 
-  const servico = await servicoAtivo(slug);
+  const pacote = await montarPacote(slug, adicionaisSlugs);
   const barbeiroId = await barbeiroPadrao();
   await prepararTrava(barbeiroId, tempo.dataLocalISO(inicio));
   const agendamento = await transacao(async (conn) => {
     await travarDia(conn, barbeiroId, tempo.dataLocalISO(inicio));
-    await garantirHorarioLivre(conn, { barbeiroId, servico, inicio, semAntecedencia: porAdmin });
-    const fim = new Date(inicio.getTime() + servico.duracao_min * MIN);
+    await garantirHorarioLivre(conn, { barbeiroId, servico: pacote, inicio, semAntecedencia: porAdmin });
+    const fim = new Date(inicio.getTime() + pacote.duracao_min * MIN);
     const { l24, l2 } = lembretesIniciais(inicio);
     const nome = cliente?.nome ?? avulso?.nome;
     const telefone = cliente?.telefone ?? avulso?.telefone ?? null;
@@ -189,16 +228,23 @@ export async function criarAgendamento({ cliente = null, avulso = null, slug, in
       try {
         const r = await consulta(
           `INSERT INTO agendamentos (codigo, cliente_id, cliente_nome, cliente_telefone, barbeiro_id, servico_id, servico_nome,
-             preco_centavos, duracao_min, inicio, fim, origem, observacao, lembrete_24h_em, lembrete_2h_em)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [gerarCodigo(), cliente?.id ?? null, nome, telefone, barbeiroId, servico.id, servico.nome, servico.preco_centavos,
-            servico.duracao_min, inicio, fim, origem, observacao, l24, l2],
+             preco_centavos, duracao_min, inicio, fim, origem, observacao, whatsapp_lembrete, lembrete_24h_em, lembrete_2h_em)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [gerarCodigo(), cliente?.id ?? null, nome, telefone, barbeiroId, pacote.servico.id, pacote.nome, pacote.preco_centavos,
+            pacote.duracao_min, inicio, fim, origem, observacao, whatsapp && telefone ? 1 : 0, l24, l2],
           conn,
         );
         id = r.insertId;
       } catch (e) {
         if (e.code !== 'ER_DUP_ENTRY' || tentativa >= 4) throw e; // código repetido: sorteia outro
       }
+    }
+    for (const a of pacote.adicionais) {
+      await consulta(
+        'INSERT INTO agendamento_adicionais (agendamento_id, servico_id, nome, preco_centavos, duracao_min) VALUES (?, ?, ?, ?, ?)',
+        [id, a.id, a.nome, a.preco_centavos, a.duracao_min],
+        conn,
+      );
     }
     const ag = await buscarAgendamento('a.id = ?', [id], conn);
     await eventos.aoAgendar(conn, ag);
@@ -212,15 +258,19 @@ function conferirPrazoCliente(ag, regras) {
   if (ag.status !== 'confirmado') throw erros.conflito('Esse horário não pode mais ser alterado.', 'status_invalido');
   const limite = new Date(ag.inicio).getTime() - regras.cancelar_ate_horas * HORA;
   if (Date.now() > limite) {
-    throw erros.conflito(`Pelo app dá para alterar até ${regras.cancelar_ate_horas} h antes. Agora, fale com a barbearia pelo WhatsApp.`, 'fora_do_prazo');
+    throw erros.conflito(`Dá para cancelar ou remarcar até ${regras.cancelar_ate_horas} h antes. Agora, fale direto com a barbearia.`, 'fora_do_prazo');
   }
 }
 
-export async function cancelarAgendamento({ codigo, usuario, porAdmin = false, motivo = null }) {
+/**
+ * Cancela. Cliente (pelo site ou respondendo "2" no WhatsApp) só até o prazo; o Fortão, a qualquer momento.
+ * peloWhatsapp: quem pediu é o dono do telefone do horário (o robô já conferiu), vale também para cliente sem conta.
+ */
+export async function cancelarAgendamento({ codigo, usuario, porAdmin = false, motivo = null, peloWhatsapp = false }) {
   const { agenda: regras } = await lerConfiguracoes();
   const ag = await transacao(async (conn) => {
     const ag = await buscarAgendamento('a.codigo = ? FOR UPDATE', [codigo], conn);
-    if (!ag || (!porAdmin && ag.cliente_id !== usuario.id)) throw erros.naoEncontrado('Horário não encontrado.');
+    if (!ag || (!porAdmin && !peloWhatsapp && ag.cliente_id !== usuario.id)) throw erros.naoEncontrado('Horário não encontrado.');
     if (porAdmin) {
       if (ag.status !== 'confirmado') throw erros.conflito('Só dá para cancelar horários confirmados.', 'status_invalido');
     } else {
@@ -232,7 +282,7 @@ export async function cancelarAgendamento({ codigo, usuario, porAdmin = false, m
       conn,
     );
     const atualizado = await buscarAgendamento('a.id = ?', [ag.id], conn);
-    await eventos.aoCancelar(conn, atualizado, { porAdmin, motivo });
+    await eventos.aoCancelar(conn, atualizado, { porAdmin, motivo, peloWhatsapp });
     return atualizado;
   });
   eventos.entregarAgora();
@@ -265,7 +315,7 @@ export async function remarcarAgendamento({ codigo, usuario, inicio: inicioISO, 
     await garantirHorarioLivre(conn, { barbeiroId, servico, inicio: novoInicio, ignorarId: ag.id, semAntecedencia: porAdmin });
     const fim = new Date(novoInicio.getTime() + ag.duracao_min * MIN);
     const { l24, l2 } = lembretesIniciais(novoInicio);
-    await consulta('UPDATE agendamentos SET inicio = ?, fim = ?, lembrete_24h_em = ?, lembrete_2h_em = ? WHERE id = ?', [novoInicio, fim, l24, l2, ag.id], conn);
+    await consulta('UPDATE agendamentos SET inicio = ?, fim = ?, lembrete_24h_em = ?, lembrete_2h_em = ?, presenca_confirmada_em = NULL WHERE id = ?', [novoInicio, fim, l24, l2, ag.id], conn);
     const atualizado = await buscarAgendamento('a.id = ?', [ag.id], conn);
     await eventos.aoRemarcar(conn, atualizado, new Date(ag.inicio));
     return atualizado;
@@ -288,6 +338,23 @@ export async function definirStatus({ codigo, status }) {
 
 // ----------------------------------------------------------------- saída
 
+/** Junta em cada agendamento a lista de adicionais (luzes, boyzão...) que ele tem. */
+export async function anexarAdicionais(lista, conn) {
+  const ids = lista.map((a) => a.id).filter(Boolean);
+  if (!ids.length) return lista;
+  const linhas = await consulta(
+    `SELECT aa.agendamento_id, s.slug, aa.nome, aa.preco_centavos, aa.duracao_min
+       FROM agendamento_adicionais aa JOIN servicos s ON s.id = aa.servico_id
+      WHERE aa.agendamento_id IN (?) ORDER BY s.ordem, s.id`,
+    [ids],
+    conn,
+  );
+  for (const ag of lista) {
+    ag.adicionais = linhas.filter((l) => l.agendamento_id === ag.id).map(({ slug, nome, preco_centavos, duracao_min }) => ({ slug, nome, preco_centavos, duracao_min }));
+  }
+  return lista;
+}
+
 /** Formato público de um agendamento (sem IDs internos). */
 export function paraCliente(ag, regras) {
   const inicio = new Date(ag.inicio);
@@ -303,6 +370,10 @@ export function paraCliente(ag, regras) {
     status: ag.status,
     cancelado_por: ag.cancelado_por,
     motivo_cancelamento: ag.motivo_cancelamento,
+    adicionais: ag.adicionais ?? [],
+    telefone: ag.cliente_telefone ?? null,
+    whatsapp_lembrete: Boolean(ag.whatsapp_lembrete),
+    presenca_confirmada: Boolean(ag.presenca_confirmada_em),
     pode_alterar: podeAlterar,
   };
 }

@@ -1,5 +1,5 @@
 // "Casca" comum a todas as páginas: cabeçalho, avisos, abas e rodapé.
-import { carregarSessao, get, post } from './api.js';
+import { carregarSessao, get, patch, post } from './api.js';
 import { h, icone, relativo, revelar } from './ui.js';
 import './ouro.js';
 
@@ -40,6 +40,48 @@ function aplicarPreferencias(usuario) {
     localStorage.setItem('fortao:tema', prefs.tema || 'escuro');
     localStorage.setItem('fortao:letra', prefs.letra_grande ? 'grande' : 'normal');
   } catch { /* sem armazenamento */ }
+}
+
+// ---------------------------------------------------------------- tema claro / escuro
+const COR_TOPO = { escuro: '#0b0b0c', claro: '#efeff0' };
+
+/** Tema que está na tela agora ("auto" segue o celular). */
+export function temaAtual() {
+  const t = document.documentElement.dataset.tema;
+  if (t === 'auto') return matchMedia('(prefers-color-scheme: light)').matches ? 'claro' : 'escuro';
+  return t === 'claro' ? 'claro' : 'escuro';
+}
+
+/** Troca o tema, guarda no aparelho e, com conta, no perfil (vale nos outros aparelhos). */
+export function definirTema(tema, usuario) {
+  const aplicar = () => {
+    document.documentElement.dataset.tema = tema;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', COR_TOPO[temaAtual()]);
+    document.dispatchEvent(new CustomEvent('tema-mudou', { detail: tema }));
+  };
+  // Troca com um esmaecer curto quando o navegador sabe fazer e a pessoa não pediu menos movimento
+  if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.startViewTransition(aplicar);
+  else aplicar();
+  try { localStorage.setItem('fortao:tema', tema); } catch { /* sem armazenamento */ }
+  if (usuario) {
+    usuario.preferencias = { ...usuario.preferencias, tema };
+    patch('/conta', { preferencias: { tema } }).catch(() => {});
+  }
+}
+
+function ligarTema(usuario) {
+  const botao = $('[data-tema-botao]');
+  if (!botao) return;
+  const desenhar = () => {
+    const claro = temaAtual() === 'claro';
+    botao.querySelector('i').className = `ph ph-${claro ? 'moon' : 'sun'}`;
+    botao.setAttribute('aria-label', claro ? 'Mudar para o tema escuro' : 'Mudar para o tema claro');
+    botao.title = claro ? 'Tema escuro' : 'Tema claro';
+  };
+  botao.addEventListener('click', () => definirTema(temaAtual() === 'claro' ? 'escuro' : 'claro', usuario));
+  document.addEventListener('tema-mudou', desenhar);
+  matchMedia('(prefers-color-scheme: light)').addEventListener?.('change', desenhar);
+  desenhar();
 }
 
 // ---------------------------------------------------------------- avisos
@@ -125,6 +167,7 @@ export async function iniciarCasca() {
   let naoLidas = 0;
   if (usuario) naoLidas = (await get('/notificacoes').catch(() => ({ nao_lidas: 0 }))).nao_lidas;
   ligarAvisos(usuario, naoLidas);
+  ligarTema(usuario);
   preencherRodape();
   revelar();
   window.addEventListener('hashchange', () => marcarNavegacao(usuario));

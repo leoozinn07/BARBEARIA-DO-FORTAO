@@ -40,6 +40,10 @@
     <!-- PERFIL -->
     <section class="painel" id="perfil" data-painel="perfil" aria-labelledby="perfil-titulo" hidden>
       <h2 class="sr-only" id="perfil-titulo">Perfil</h2>
+      <section class="pilha" aria-labelledby="proximo-perfil-titulo">
+        <h2 class="titulo" id="proximo-perfil-titulo">Seu próximo horário</h2>
+        <div data-proximo-perfil><div class="esqueleto esqueleto--horario"></div></div>
+      </section>
       <form class="grupo-form" data-form-perfil novalidate>
         <h2>Seus dados</h2>
         <p class="alerta alerta--erro" data-erro-geral role="alert" tabindex="-1" hidden></p>
@@ -49,7 +53,7 @@
           <p class="erro-campo" id="nome-erro" data-erro-de="nome"></p>
         </div>
         <div class="campo">
-          <label for="telefone">WhatsApp</label>
+          <label for="telefone">WhatsApp (para a confirmação e os lembretes)</label>
           <input id="telefone" name="telefone" type="tel" inputmode="tel" autocomplete="tel" aria-describedby="telefone-erro">
           <p class="erro-campo" id="telefone-erro" data-erro-de="telefone"></p>
         </div>
@@ -117,12 +121,23 @@
     </div>
   </dialog>
 
+  <!-- Lembrete -->
+  <dialog class="folha" data-folha-lembrete aria-labelledby="lembrete-titulo">
+    <div class="folha__alca" aria-hidden="true"></div>
+    <div class="folha__corpo">
+      <div class="folha__topo"><h2 id="lembrete-titulo">Adicionar lembrete</h2><button class="icone-botao" type="button" data-fechar aria-label="Fechar"><i class="ph ph-x" aria-hidden="true"></i></button></div>
+      <p class="subtitulo" data-lembrete-texto></p>
+      <div data-lembrete-acoes></div>
+    </div>
+  </dialog>
+
   <!-- Cancelar -->
   <dialog class="folha" data-folha-cancelar aria-labelledby="cancelar-titulo">
     <div class="folha__alca" aria-hidden="true"></div>
     <div class="folha__corpo">
       <h2 class="titulo" id="cancelar-titulo">Cancelar este horário?</h2>
       <p class="subtitulo" data-cancelar-texto></p>
+      <p class="subtitulo" data-cancelar-prazo></p>
       <p class="alerta alerta--erro" data-cancelar-erro role="alert" hidden></p>
       <button class="botao botao--perigo botao--bloco" type="button" data-cancelar-confirmar>Cancelar horário</button>
       <button class="botao botao--suave botao--bloco" type="button" data-fechar>Manter horário</button>

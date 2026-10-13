@@ -21,7 +21,12 @@ Sucesso é: cliente marca em poucos toques, não esquece o horário, o Fortão n
 | Dourado em detalhes e no toque | Preço da tabela, contador de avisos, escolha marcada, gráfico; contorno dourado ao tocar em botão ou caixa |
 | Rendimento | Painel > Rendimento: recebido, a receber, atendimentos, ticket médio, faltas, gráfico por dia ou mês e por serviço |
 | Tudo funcional, sem "testes" | Sem dados de exemplo e sem suíte de testes no repositório. O fluxo foi conferido à mão num MySQL local |
-| Catálogo inicial | Corte Fortão R$ 40 (40 min), Corte e sobrancelha R$ 45 (45 min), Corte e barba R$ 50 (60 min) |
+| Catálogo (13/10) | Corte navalhado, Corte normal, Corte + sobrancelha, Corte + sobrancelha + barba, Corte + barba; adicionais Luzes, Boyzão e Progressiva. Preços e tempos iniciais são suposição, editáveis no painel |
+| Confirmação antes de marcar | Folha "Tem certeza e consciência de que esse será o horário agendado?" com Sim / Não |
+| Telefone para lembrete no WhatsApp | Mini formulário obrigatório na confirmação; robô responde 1 (confirmar presença) e 2 (cancelar) |
+| Lembrete logo depois de marcar | Agenda do celular (.ics) e Google Agenda na folha de sucesso e no cartão do horário |
+| Botão claro/escuro | No topo de todas as páginas; fica guardado no aparelho e na conta |
+| Fechado domingo e segunda; cancelar até 2 h antes | Horário de funcionamento e prazo iniciais, editáveis no painel |
 | Não informado | Terça a sexta 9h às 20h, sábado 8h às 18h; antecedência de 30 min; agenda aberta 30 dias; cancelar até 2 h antes |
 
 ## 3. Arquitetura
@@ -56,13 +61,16 @@ Node 22 + Express 5 ──► MySQL 8
 | `bloqueios` | Períodos fechados pelo Fortão |
 | `agendamentos` | Horário em UTC, cópia do nome e do preço do serviço, status, origem (site ou balcão), marcações de lembrete |
 | `agenda_travas` | Uma linha por barbeiro e dia, travada com `SELECT … FOR UPDATE` ao marcar |
+| `agendamento_adicionais` | Adicionais de cada horário, com nome e preço do momento da marcação |
 | `notificacoes` | Avisos do sino |
 | `emails_saida` | Fila de e-mails |
+| `whatsapp_saida` | Fila do WhatsApp (modelos aprovados e respostas do robô) |
+| `whatsapp_recebidas` | Mensagens recebidas já tratadas (a Meta pode reenviar a mesma) |
 | `configuracoes` | Endereço, contatos, regras da agenda (JSON) |
 | `auditoria` | Ações do admin e eventos de segurança |
 | `migracoes` | Quais arquivos de `servidor/db/migracoes/` já rodaram |
 
-A migração `002_site.sql` tira a tabela de inscrições de notificação push e troca a origem "app" por "site". Ela roda sozinha em bancos que já tinham a versão anterior.
+A migração `002_site.sql` tira a tabela de inscrições de notificação push e troca a origem "app" por "site". A `003_catalogo_whatsapp.sql` cria o tipo de serviço (principal ou adicional), o catálogo novo, os adicionais por horário e as filas do WhatsApp. As duas rodam sozinhas em bancos que já tinham a versão anterior.
 
 **Sem horário duplicado:** ao marcar ou remarcar, a transação trava a linha do dia em `agenda_travas`, confere sobreposição com horários e folgas e só então grava. Dois pedidos simultâneos para o mesmo horário: um entra, o outro recebe "esse horário acabou de ser ocupado".
 
@@ -97,25 +105,25 @@ A migração `002_site.sql` tira a tabela de inscrições de notificação push 
 - Só cookies essenciais; fontes e ícones servidos pelo próprio site; mapa do Google só depois do toque.
 - Na conta: baixar os dados (JSON) e excluir a conta (anonimiza, cancela horários futuros, mantém o histórico sem dados pessoais).
 
-## 8. E-mails e avisos
+## 8. E-mails, WhatsApp e avisos
 
-| Evento | E-mail | Aviso no sino |
-| --- | --- | --- |
-| Cadastro | Confirme seu e-mail | Boas-vindas |
-| Esqueci a senha | Link de redefinição (1 h) | Não |
-| Agendamento | Confirmação com valor, endereço e convite de agenda (.ics) | Sim |
-| Remarcação | Novo horário | Sim |
-| Cancelamento | Pelo cliente ou pelo Fortão, com motivo | Sim |
-| Lembrete 24 h e 2 h | Sim | Sim |
-| Novo horário, remarcação e cancelamento (para o Fortão) | Sim | Sim |
+| Evento | E-mail | WhatsApp (se o cliente aceitou) | Aviso no sino |
+| --- | --- | --- | --- |
+| Cadastro | Confirme seu e-mail | Não | Boas-vindas |
+| Esqueci a senha | Link de redefinição (1 h) | Não | Não |
+| Agendamento | Confirmação com valor, endereço e convite (.ics) | Modelo `horario_confirmado` | Sim |
+| Remarcação | Novo horário | Modelo `horario_remarcado` | Sim |
+| Cancelamento | Pelo cliente ou pelo Fortão, com motivo | Modelo `horario_cancelado` | Sim |
+| Lembrete 24 h e 2 h | Sim | Modelo `lembrete_horario` | Sim |
+| Cliente responde 1 ou 2 | Não | Resposta do robô | O Fortão vê "Confirmou" ou o cancelamento |
 
-Sem SMTP configurado, os e-mails ficam em `var/emails/` e o painel mostra um aviso.
+Sem SMTP ou sem WhatsApp configurado, as mensagens ficam em `var/emails/` e `var/whatsapp/` e o painel mostra um aviso.
 
 ## 9. Telas
 
-Cliente: início (agendamento em 3 toques), entrar, criar conta, esqueci a senha, redefinir senha, confirmar e-mail, marcar horário, minha conta (horários, perfil, aparência, senha, privacidade), termos, privacidade, LGPD e 404.
+Cliente: início (agendamento com adicionais), entrar, criar conta, esqueci a senha, redefinir senha, confirmar e-mail, marcar horário (com a confirmação e o mini formulário do WhatsApp), sucesso com lembrete, minha conta (próximo horário, horários, perfil, aparência, senha, privacidade), termos, privacidade, LGPD e 404. Botão de tema claro/escuro no topo.
 
-Fortão: agenda do dia, resumo, rendimento, novo horário (cliente com conta ou do balcão), concluir, falta, remarcar, cancelar com motivo, folgas, serviços e preços, horário de funcionamento, dados da barbearia, clientes.
+Fortão: agenda do dia (com o selo de presença confirmada no WhatsApp), resumo, rendimento (com adicionais separados), novo horário (cliente com conta ou do balcão, com adicionais e WhatsApp), concluir, falta, remarcar, cancelar com motivo, folgas, serviços e adicionais, horário de funcionamento, dados da barbearia, clientes.
 
 ## 10. Fora desta versão
 

@@ -1,7 +1,8 @@
 // Página inicial: saudação, próximo horário livre, agendamento em 3 toques, tabela, frase do dia e endereço.
-import { get, post } from './api.js';
+import { get } from './api.js';
 import { iniciarCasca, obterConfig } from './casca.js';
-import { esquecerEscolha, montarAgendamento } from './agendamento.js';
+import { montarAgendamento, pacote } from './agendamento.js';
+import { marcarComConfirmacao } from './confirmar.js';
 import { abrirFolha, dataCurta, h, primeiroNome, quando, reais } from './ui.js';
 
 const $ = (s) => document.querySelector(s);
@@ -24,30 +25,30 @@ const cumprimento = hh < 12 ? 'Bom dia' : hh < 18 ? 'Boa tarde' : 'Boa noite';
 $('[data-saudacao]').textContent = usuario ? `${cumprimento}, ${primeiroNome(usuario.nome)}` : cumprimento;
 
 // ---------------------------------------------------------------- agendamento
-const folhaSucesso = $('[data-folha-sucesso]');
 const folhaEntrar = $('[data-folha-entrar]');
 montarAgendamento($('[data-agendamento]'), {
-  async aoConfirmar({ servico, inicio }) {
+  async aoConfirmar({ servico, adicionais, inicio }) {
     if (!usuario) {
-      $('[data-entrar-texto]').textContent = `${servico.nome}, ${quando(inicio)}. Entre ou crie a conta para confirmar: seu horário fica guardado.`;
+      const nome = pacote(servico, adicionais).nome;
+      $('[data-entrar-texto]').textContent = `${nome}, ${quando(inicio)}. Entre ou crie a conta para confirmar: seu horário fica guardado.`;
       abrirFolha(folhaEntrar);
       return;
     }
-    const { agendamento } = await post('/agendamentos', { servico: servico.slug, inicio });
-    esquecerEscolha();
-    $('[data-sucesso-texto]').textContent = `${agendamento.servico}, ${quando(agendamento.inicio)}. Valor: ${reais(agendamento.preco_centavos)}, pago na barbearia.`;
-    abrirFolha(folhaSucesso);
-    folhaSucesso.addEventListener('close', () => location.reload(), { once: true });
+    await marcarComConfirmacao({ servico, adicionais, inicio, usuario, config: await obterConfig(), aoFechar: () => location.reload() });
   },
 });
 
 // ---------------------------------------------------------------- próximo horário livre e tabela
-get('/servicos').then(async ({ servicos }) => {
-  $('[data-tabela]').replaceChildren(...servicos.map((s) => h('li', { class: 'tabela__item' },
+get('/servicos').then(async ({ servicos, adicionais }) => {
+  const linha = (s, adicional = false) => h('li', { class: `tabela__item${adicional ? ' tabela__item--adicional' : ''}` },
     h('span', { class: 'tabela__nome' }, s.nome, h('span', { class: 'tabela__duracao' }, `${s.duracao_min} min`)),
-    h('span', { class: 'tabela__preco' }, reais(s.preco_centavos)),
+    h('span', { class: 'tabela__preco' }, `${adicional ? '+ ' : ''}${reais(s.preco_centavos)}`),
     h('span', { class: 'tabela__desc' }, s.descricao),
-  )));
+  );
+  $('[data-tabela]').replaceChildren(...servicos.map((s) => linha(s)));
+  const extras = $('[data-tabela-adicionais]');
+  extras.replaceChildren(...(adicionais || []).map((s) => linha(s, true)));
+  extras.closest('[data-adicionais-bloco]').hidden = !(adicionais || []).length;
   const { dias } = await get(`/dias?servico=${servicos[0].slug}`);
   const dia = dias.find((d) => d.livres > 0);
   if (!dia) return;

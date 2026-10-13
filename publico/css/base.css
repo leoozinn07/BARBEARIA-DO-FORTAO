@@ -178,6 +178,7 @@ main { padding-bottom: 24px; }
 .chip i { font-size: 1rem; }
 .selo { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 650; background: var(--sup-2); color: var(--texto-2); }
 .selo--confirmado { background: var(--ativo-bg); color: var(--ativo-fg); }
+.selo--ouro { background: var(--ouro-fundo); color: var(--ouro); }
 .selo--cancelado { background: var(--erro-fundo); color: var(--erro); }
 .selo--faltou { border: 1px solid var(--erro); color: var(--erro); background: transparent; }
 
@@ -252,6 +253,23 @@ dialog.folha[open]::backdrop { background: rgb(0 0 0 / 0.55); }
 .folha__alca { width: 40px; height: 5px; border-radius: 99px; background: var(--sup-3); margin: 10px auto 4px; }
 .folha__topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .folha__topo h2 { font-size: 1.25rem; font-weight: 650; letter-spacing: -0.02em; }
+
+/* ---------------------------------------------------------------- confirmar antes de marcar */
+.confirmar__resumo { display: grid; gap: 0; margin: 0; border-radius: 18px; background: var(--sup-2); padding: 4px 16px; }
+.confirmar__resumo > div { display: grid; grid-template-columns: 84px 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--borda); }
+.confirmar__resumo > div:first-child { border-top: 0; }
+.confirmar__resumo dt { color: var(--texto-2); font-size: 0.875rem; }
+.confirmar__resumo dd { margin: 0; font-weight: 600; }
+.confirmar__pergunta { font-size: 1.0625rem; font-weight: 650; letter-spacing: -0.01em; text-wrap: balance; }
+.confirmar__botoes { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; }
+
+/* ---------------------------------------------------------------- lembrete (agenda do celular, Google, WhatsApp) */
+.lembrete { display: grid; gap: 10px; }
+.lembrete__titulo { font-size: 1rem; font-weight: 650; }
+.lembrete__botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.lembrete__botoes .botao { min-height: 48px; padding: 0 12px; }
+.lembrete__whats { display: flex; gap: 8px; align-items: flex-start; font-size: 0.875rem; color: var(--texto-2); }
+.lembrete__whats i { font-size: 1.15rem; color: var(--ouro); margin-top: 1px; }
 
 /* ---------------------------------------------------------------- ícone de sucesso */
 .sucesso__icone { width: 64px; height: 64px; border-radius: 20px; background: var(--ativo-bg); color: var(--ativo-fg); display: grid; place-items: center; font-size: 2.2rem; }
