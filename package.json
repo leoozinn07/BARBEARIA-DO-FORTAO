@@ -2,7 +2,7 @@
   "name": "barbearia-do-fortao",
   "version": "1.0.0",
   "private": true,
-  "description": "Agendamento da Barbearia do Fortão (Cohab 5, São Paulo): site, app Android (PWA/TWA) e painel do admin.",
+  "description": "Site de agendamento da Barbearia do Fortão (Cohab 5, São Paulo): marcação de cortes, painel do admin e rendimento. Banco no Supabase.",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -13,11 +13,7 @@
     "migrar": "node servidor/db/migrar.js",
     "semear": "node servidor/db/semear.js",
     "admin:criar": "node scripts/criar-admin.js",
-    "vapid": "node scripts/gerar-vapid.js",
-    "icones": "node scripts/gerar-icones.js",
-    "test": "node --test --test-concurrency=1 \"testes/*.test.js\"",
-    "lint": "eslint .",
-    "e2e": "node testes/e2e/fluxo-completo.js"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.2",
@@ -26,16 +22,13 @@
     "express": "^5.3.0",
     "express-rate-limit": "^8.7.1",
     "helmet": "^8.3.0",
-    "mysql2": "^3.24.5",
     "nodemailer": "^10.1.0",
-    "web-push": "^3.6.7",
+    "pg": "^8.23.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "eslint": "^9.39.5",
-    "globals": "^17.13.0",
-    "playwright": "^1.56.1",
-    "supertest": "^7.3.1"
+    "globals": "^17.13.0"
   }
 }

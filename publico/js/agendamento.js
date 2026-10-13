@@ -85,7 +85,12 @@ export function montarAgendamento(raiz, opcoes) {
         h('span', { class: 'sr-only' }, ` ${dd}/${m}`),
       );
     }));
-    caixaDias.querySelector('input:checked')?.closest('label')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+    // Centraliza o dia escolhido só na faixa horizontal (scrollIntoView também rolaria a página)
+    const escolhido = caixaDias.querySelector('input:checked')?.closest('label');
+    if (escolhido) {
+      const desvio = escolhido.getBoundingClientRect().left - caixaDias.getBoundingClientRect().left;
+      caixaDias.scrollLeft += desvio - (caixaDias.clientWidth - escolhido.offsetWidth) / 2;
+    }
   }
 
   function desenharHoras() {

@@ -3,7 +3,7 @@
 /* ---------- hero ---------- */
 .hero { padding-top: 4px; }
 .hero__cartao { position: relative; overflow: hidden; border-radius: var(--raio); min-height: min(70dvh, 620px); display: grid; align-items: end; isolation: isolate; box-shadow: var(--sombra); background: #111; }
-.hero__cartao img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 10%; z-index: -1; }
+.hero__cartao img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0%; z-index: -1; }
 .hero__cartao::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgb(11 11 12 / 0) 24%, rgb(11 11 12 / 0.8) 50%, rgb(11 11 12 / 0.97) 70%); }
 .hero__texto { padding: 22px 20px; display: grid; gap: 10px; color: #f2f2f3; }
 .hero__saudacao { font-size: 0.875rem; color: #c4c4ca; font-weight: 500; }
@@ -13,6 +13,7 @@
   background: rgb(255 255 255 / 0.12); border: 1px solid rgb(255 255 255 / 0.18); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); transition: transform 160ms var(--ease-out); }
 .hero__livre:active { transform: scale(0.97); }
 .hero__livre b { font-weight: 650; }
+.hero__livre i { color: var(--ouro); }
 
 @media (prefers-reduced-motion: no-preference) {
   .js .hero__cartao { animation: surgir 900ms var(--ease-out) both; }
@@ -33,13 +34,13 @@
 .tabela__item:last-child { border-bottom: 1px solid var(--borda); }
 .tabela__item::before { content: ""; grid-area: linha; border-bottom: 2px dotted var(--borda-forte); transform: translateY(-5px); }
 .tabela__nome { grid-area: nome; font-size: 1.125rem; font-weight: 650; letter-spacing: -0.02em; }
-.tabela__preco { grid-area: preco; font-size: 1.375rem; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.tabela__preco { grid-area: preco; font-size: 1.375rem; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--ouro); }
 .tabela__desc { grid-area: desc; color: var(--texto-2); font-size: 0.9375rem; }
 .tabela__duracao { color: var(--texto-2); font-weight: 500; font-size: 0.8125rem; margin-left: 6px; letter-spacing: 0; }
 
-/* ---------- Fortão ---------- */
+/* ---------- Fortão (ilustração da bancada, sem foto) ---------- */
 .fortao { border-radius: var(--raio); overflow: hidden; background: var(--sup); border: 1px solid var(--borda); }
-.fortao img { width: 100%; aspect-ratio: 16 / 11; object-fit: cover; object-position: 50% 14%; }
+.fortao img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #111; }
 .fortao__texto { padding: 20px; display: grid; gap: 12px; }
 .fortao__texto h2 { font-size: clamp(1.7rem, 7.6vw, 2.6rem); font-weight: 700; letter-spacing: -0.04em; line-height: 1.05; text-wrap: balance; }
 .fortao__texto p { color: var(--texto-2); }

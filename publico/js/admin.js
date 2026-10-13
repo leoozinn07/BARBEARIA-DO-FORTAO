@@ -1,6 +1,7 @@
-// Painel do Fortão: resumo, agenda do dia, novo horário, folgas, serviços, funcionamento, barbearia e clientes.
+// Painel do Fortão: resumo, agenda do dia, rendimento, novo horário, folgas, serviços, funcionamento, barbearia e clientes.
 import { del, get, post, put } from './api.js';
 import { iniciarCasca } from './casca.js';
+import { montarRendimento } from './rendimento.js';
 import {
   abrirFolha, dataLonga, h, hojeISO, hora, icone, limparErros, mostrarErros, ocupado, reais, relativo, telefoneBonito, toast, toastErro,
 } from './ui.js';
@@ -24,7 +25,7 @@ document.querySelectorAll('dialog [data-fechar]').forEach((b) => b.addEventListe
 $('[data-hoje]').textContent = dataLonga(meioDia(hojeISO())).replace(/^./, (c) => c.toUpperCase());
 
 // ---------------------------------------------------------------- segmentos
-const SEGMENTOS = ['agenda', 'bloqueios', 'servicos', 'funcionamento', 'barbearia', 'clientes'];
+const SEGMENTOS = ['agenda', 'rendimento', 'bloqueios', 'servicos', 'funcionamento', 'barbearia', 'clientes'];
 const carregados = new Set();
 function mostrarSegmento() {
   const alvo = SEGMENTOS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'agenda';
@@ -32,7 +33,7 @@ function mostrarSegmento() {
   document.querySelectorAll('[data-segmento]').forEach((a) => a.setAttribute('aria-current', String(a.dataset.segmento === alvo)));
   if (!carregados.has(alvo)) {
     carregados.add(alvo);
-    ({ bloqueios: carregarBloqueios, servicos: carregarServicos, funcionamento: carregarFuncionamento, barbearia: carregarBarbearia, clientes: () => buscarClientes('') })[alvo]?.();
+    ({ rendimento: () => montarRendimento($('[data-painel="rendimento"]')), bloqueios: carregarBloqueios, servicos: carregarServicos, funcionamento: carregarFuncionamento, barbearia: carregarBarbearia, clientes: () => buscarClientes('') })[alvo]?.();
   }
 }
 window.addEventListener('hashchange', mostrarSegmento);
@@ -41,12 +42,13 @@ window.addEventListener('hashchange', mostrarSegmento);
 async function carregarResumo() {
   try {
     const r = await get(`/admin/resumo?data=${dia}`);
+    $('[data-aviso-email]').hidden = r.email_real;
     const ativos = (x) => x.total - x.cancelados;
     $('[data-resumo]').replaceChildren(
       h('div', { class: 'resumo__item' }, h('small', {}, dia === hojeISO() ? 'Hoje' : 'Neste dia'), h('b', {}, String(ativos(r.dia))), h('span', {}, `horários, ${reais(r.dia.previsto_centavos)}`)),
       h('div', { class: 'resumo__item' }, h('small', {}, '7 dias'), h('b', {}, String(ativos(r.semana))), h('span', {}, `previsto ${reais(r.semana.previsto_centavos)}`)),
-      h('div', { class: 'resumo__item' }, h('small', {}, 'No mês'), h('b', {}, reais(r.mes.realizado_centavos)), h('span', {}, `${r.mes.faltas} falta${r.mes.faltas === 1 ? '' : 's'}`)),
-      h('div', { class: 'resumo__item' }, h('small', {}, 'Clientes'), h('b', {}, String(r.clientes)), h('span', {}, 'com conta no app')),
+      h('a', { class: 'resumo__item', href: '#rendimento' }, h('small', {}, 'Recebido no mês'), h('b', {}, reais(r.mes.realizado_centavos)), h('span', {}, `${r.mes.faltas} falta${r.mes.faltas === 1 ? '' : 's'} · ver rendimento`)),
+      h('div', { class: 'resumo__item' }, h('small', {}, 'Clientes'), h('b', {}, String(r.clientes)), h('span', {}, 'com conta no site')),
     );
   } catch (e) {
     $('[data-resumo]').replaceChildren(h('p', { class: 'alerta alerta--erro' }, e.message));
@@ -198,7 +200,7 @@ formCancelar.addEventListener('submit', async (ev) => {
   try {
     await post(`/admin/agendamentos/${alvo.codigo}/cancelar`, { motivo: formCancelar.elements.motivo.value || undefined });
     folhaCancelar.close();
-    toast({ titulo: 'Horário cancelado', texto: alvo.cliente_email ? 'O cliente foi avisado por e-mail e no app.' : 'Avise o cliente pelo WhatsApp.' });
+    toast({ titulo: 'Horário cancelado', texto: alvo.cliente_email ? 'O cliente foi avisado por e-mail e na conta dele.' : 'Avise o cliente pelo WhatsApp.' });
     carregarAgenda();
   } catch (e) { mostrarErros(formCancelar, e); } finally { ocupado(botao, false); }
 });
@@ -284,7 +286,10 @@ async function carregarServicos() {
       h('div', { class: 'campo' }, h('label', { for: `s-desc-${s.id}` }, 'Descrição'), h('input', { id: `s-desc-${s.id}`, name: 'descricao', value: s.descricao, maxlength: 255 })),
       h('div', { class: 'servico-admin__rodape' },
         h('label', { class: 'marcar' }, h('input', { type: 'checkbox', name: 'ativo', checked: Boolean(s.ativo) }), h('span', {}, 'Aparece para os clientes')),
-        h('button', { class: 'botao botao--suave botao--p', type: 'submit' }, 'Salvar'),
+        h('div', { class: 'servico-admin__acoes' },
+          h('button', { class: 'botao botao--suave botao--p', type: 'button', onclick: () => removerServico(s) }, 'Remover'),
+          h('button', { class: 'botao botao--cheio botao--p', type: 'submit' }, 'Salvar'),
+        ),
       ),
     );
     form.addEventListener('submit', async (ev) => {
@@ -302,6 +307,16 @@ async function carregarServicos() {
     });
     return form;
   }));
+}
+
+async function removerServico(s) {
+  if (!window.confirm(`Remover "${s.nome}"? Ele some da tabela e da agenda.`)) return;
+  try {
+    await del(`/admin/servicos/${s.id}`);
+    toast({ titulo: 'Serviço removido', texto: `${s.nome} saiu da tabela.` });
+    servicos = [];
+    carregarServicos();
+  } catch (e) { toastErro(e, 'Não deu para remover'); }
 }
 
 const formNovoServico = $('[data-form-novo-servico]');

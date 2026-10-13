@@ -3,14 +3,16 @@
 <head>
   <!-- incluir:cabeca -->
   <title>Barbearia do Fortão | Corte com hora marcada na Cohab 5, São Paulo</title>
-  <meta name="description" content="Marque seu corte na Barbearia do Fortão, na Cohab 5 em São Paulo. Corte Fortão R$ 40, corte e sobrancelha R$ 45, corte e barba R$ 50. Sem fila, com lembrete no celular.">
+  <meta name="description" content="Marque seu corte na Barbearia do Fortão, na Cohab 5 em São Paulo. Corte Fortão R$ 40, corte e sobrancelha R$ 45, corte e barba R$ 50. Sem fila, com lembrete por e-mail. Pagamento na barbearia.">
   <link rel="canonical" href="/">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="pt_BR">
   <meta property="og:title" content="Barbearia do Fortão | Corte com hora marcada">
   <meta property="og:description" content="Escolhe o serviço, o dia e o horário. O Fortão te espera sem fila, na Cohab 5.">
-  <meta property="og:image" content="/img/fortao-corrida.jpg">
-  <link rel="preload" href="/img/fortao-corrida.jpg" as="image" fetchpriority="high">
+  <meta property="og:image" content="/img/og-barbearia.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <link rel="preload" href="/img/cena-ferramentas.svg" as="image" fetchpriority="high">
   <link rel="stylesheet" href="/css/agenda.css">
   <link rel="stylesheet" href="/css/inicio.css">
   <script type="application/ld+json">
@@ -18,7 +20,7 @@
     "@context": "https://schema.org",
     "@type": "BarberShop",
     "name": "Barbearia do Fortão",
-    "image": "/img/fortao-corrida.jpg",
+    "image": "/img/og-barbearia.jpg",
     "priceRange": "R$ 40 - R$ 50",
     "address": { "@type": "PostalAddress", "addressLocality": "São Paulo", "addressRegion": "SP", "addressCountry": "BR", "streetAddress": "Cohab 5" },
     "makesOffer": [
@@ -37,7 +39,7 @@
     <!-- HERO -->
     <section class="hero container" id="inicio" aria-labelledby="hero-titulo">
       <div class="hero__cartao">
-        <img src="/img/fortao-corrida.jpg" alt="Fortão sorrindo, de boné, numa pista de corrida no parque" width="598" height="820" fetchpriority="high">
+        <img src="/img/cena-ferramentas.svg" alt="" width="1080" height="1350" fetchpriority="high">
         <div class="hero__texto">
           <p class="hero__saudacao" data-saudacao>Olá</p>
           <h1 id="hero-titulo">Seu corte, na hora marcada.</h1>
@@ -67,7 +69,7 @@
     <!-- O FORTÃO -->
     <section class="container secao" id="fortao" aria-labelledby="fortao-titulo">
       <div class="fortao" data-revelar>
-        <img src="/img/fortao-espelho.jpg" alt="Fortão de boné, sorrindo, tirando foto no espelho depois do treino" width="628" height="715" loading="lazy">
+        <img src="/img/cena-bancada.svg" alt="" width="1200" height="900" loading="lazy">
         <div class="fortao__texto">
           <h2 id="fortao-titulo">“Disciplina é o meu superpoder.”</h2>
           <p>Corrida e treino fazem parte da rotina do Fortão. Na cadeira, o compromisso é o mesmo: horário respeitado e corte no capricho.</p>
@@ -94,8 +96,8 @@
       <h2 class="titulo" id="como-titulo" data-revelar>Depois que você marca</h2>
       <ul class="passos">
         <li class="passo" data-revelar data-i="0"><span class="passo__icone"><i class="ph ph-envelope-simple" aria-hidden="true"></i></span><div><h3>E-mail de confirmação</h3><p>Chega na hora, com dia, horário, valor e convite para a agenda do celular.</p></div></li>
-        <li class="passo" data-revelar data-i="1"><span class="passo__icone"><i class="ph ph-bell-ringing" aria-hidden="true"></i></span><div><h3>Lembrete antes do corte</h3><p>Um dia antes e duas horas antes, por e-mail e no app.</p></div></li>
-        <li class="passo" data-revelar data-i="2"><span class="passo__icone"><i class="ph ph-arrows-left-right" aria-hidden="true"></i></span><div><h3>Remarcar é fácil</h3><p>Mudou o plano? Troque o horário pelo app até 2 horas antes.</p></div></li>
+        <li class="passo" data-revelar data-i="1"><span class="passo__icone"><i class="ph ph-bell-ringing" aria-hidden="true"></i></span><div><h3>Lembrete antes do corte</h3><p>Um dia antes e duas horas antes, por e-mail e nos avisos da sua conta.</p></div></li>
+        <li class="passo" data-revelar data-i="2"><span class="passo__icone"><i class="ph ph-arrows-left-right" aria-hidden="true"></i></span><div><h3>Remarcar é fácil</h3><p>Mudou o plano? Troque o horário pelo site até 2 horas antes.</p></div></li>
       </ul>
     </section>
 
@@ -133,7 +135,6 @@
       <h2 class="titulo" id="sucesso-titulo">Fechou! Horário marcado.</h2>
       <p class="subtitulo" data-sucesso-texto></p>
       <p class="subtitulo">A confirmação chegou no seu e-mail. Vamos te lembrar antes.</p>
-      <button class="botao botao--linha botao--bloco" type="button" data-sucesso-push hidden><i class="ph ph-bell-ringing" aria-hidden="true"></i> Receber lembrete no celular</button>
       <a class="botao botao--cheio botao--bloco" href="/conta#horarios">Ver meus horários</a>
     </div>
   </dialog>

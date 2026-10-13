@@ -1,6 +1,8 @@
 // Painel do Fortão. Toda rota exige papel admin e as ações ficam na auditoria.
 import { Router } from 'express';
-import { consulta, umaLinha, transacao } from '../db/index.js';
+import { FUSO } from '../config.js';
+import { PG, consulta, executar, umaLinha, transacao } from '../db/index.js';
+import { smtpConfigurado } from '../emails/fila.js';
 import { erros } from '../lib/erros.js';
 import * as tempo from '../lib/tempo.js';
 import { campos, validar, z } from '../lib/validacao.js';
@@ -25,10 +27,10 @@ rotasAdmin.get('/agenda', validar(z.object({ de: campos.dataISO, ate: campos.dat
   const de = req.dados.de;
   const ate = req.dados.ate ?? de;
   if (ate < de || tempo.somarDias(de, 62) < ate) throw erros.validacao({ ate: 'Período inválido (máximo de 62 dias).' });
-  const linhas = await consulta(`${SELECT_AGENDA} WHERE a.inicio >= ? AND a.inicio < ? ORDER BY a.inicio`, [
+  const linhas = await consulta(`${SELECT_AGENDA} WHERE a.inicio >= $1 AND a.inicio < $2 ORDER BY a.inicio`, [
     tempo.limitesDoDia(de).de, tempo.limitesDoDia(ate).ate,
   ]);
-  const bloqueios = await consulta('SELECT id, inicio, fim, motivo FROM bloqueios WHERE inicio < ? AND fim > ? ORDER BY inicio', [
+  const bloqueios = await consulta('SELECT id, inicio, fim, motivo FROM bloqueios WHERE inicio < $1 AND fim > $2 ORDER BY inicio', [
     tempo.limitesDoDia(ate).ate, tempo.limitesDoDia(de).de,
   ]);
   res.set('Cache-Control', 'no-store').json({ agendamentos: linhas.map(paraAdmin), bloqueios });
@@ -41,10 +43,11 @@ rotasAdmin.get('/resumo', validar(z.object({ data: campos.dataISO.optional() }),
   const mesInicio = tempo.limitesDoDia(`${hoje.slice(0, 7)}-01`).de;
   const contar = (de, ate) => umaLinha(
     `SELECT COUNT(*) AS total,
-            COALESCE(SUM(CASE WHEN status IN ('confirmado','concluido') THEN preco_centavos END), 0) AS previsto_centavos,
-            COALESCE(SUM(CASE WHEN status = 'concluido' THEN preco_centavos END), 0) AS realizado_centavos,
-            SUM(status = 'faltou') AS faltas, SUM(status = 'cancelado') AS cancelados
-       FROM agendamentos WHERE inicio >= ? AND inicio < ?`,
+            COALESCE(SUM(preco_centavos) FILTER (WHERE status IN ('confirmado', 'concluido')), 0) AS previsto_centavos,
+            COALESCE(SUM(preco_centavos) FILTER (WHERE status = 'concluido'), 0) AS realizado_centavos,
+            COUNT(*) FILTER (WHERE status = 'faltou') AS faltas,
+            COUNT(*) FILTER (WHERE status = 'cancelado') AS cancelados
+       FROM agendamentos WHERE inicio >= $1 AND inicio < $2`,
     [de, ate],
   );
   const [doDia, daSemana, doMes, clientes] = await Promise.all([
@@ -53,14 +56,117 @@ rotasAdmin.get('/resumo', validar(z.object({ data: campos.dataISO.optional() }),
     contar(mesInicio, dia.ate),
     umaLinha("SELECT COUNT(*) AS total FROM usuarios WHERE papel = 'cliente' AND excluido_em IS NULL"),
   ]);
-  const normalizar = (l) => Object.fromEntries(Object.entries(l).map(([k, v]) => [k, Number(v ?? 0)]));
-  res.set('Cache-Control', 'no-store').json({ data: hoje, dia: normalizar(doDia), semana: normalizar(daSemana), mes: normalizar(doMes), clientes: Number(clientes.total) });
+  res.set('Cache-Control', 'no-store').json({
+    data: hoje, dia: doDia, semana: daSemana, mes: doMes, clientes: clientes.total,
+    // Sem SMTP, os e-mails não saem de verdade: o painel mostra o aviso
+    email_real: smtpConfigurado(),
+  });
+}));
+
+// ------------------------------------------------------------------ rendimento
+// O que entrou (concluído), o que ainda vai entrar (confirmado) e o que se perdeu com faltas.
+// O preço vem de cada agendamento, copiado na hora da marcação: mudar a tabela de preços não reescreve o passado.
+const MAX_DIAS_RENDIMENTO = 366;
+const SOMAS = `
+  COALESCE(SUM(a.preco_centavos) FILTER (WHERE a.status = 'concluido'), 0) AS realizado_centavos,
+  COUNT(*) FILTER (WHERE a.status = 'concluido') AS atendimentos,
+  COALESCE(SUM(a.preco_centavos) FILTER (WHERE a.status = 'confirmado'), 0) AS a_receber_centavos,
+  COUNT(*) FILTER (WHERE a.status = 'confirmado') AS agendados`;
+
+const diasEntre = (de, ate) => Math.round((Date.parse(`${ate}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / 86400000);
+
+/** Todos os dias (ou meses) do período, para o gráfico não pular os vazios. */
+function periodos(de, ate, porMes) {
+  const lista = [];
+  if (porMes) {
+    for (let p = `${de.slice(0, 7)}-01`; p <= ate; ) {
+      lista.push(p);
+      const [a, m] = p.split('-').map(Number);
+      p = m === 12 ? `${a + 1}-01-01` : `${a}-${String(m + 1).padStart(2, '0')}-01`;
+    }
+  } else {
+    for (let p = de; p <= ate; p = tempo.somarDias(p, 1)) lista.push(p);
+  }
+  return lista;
+}
+
+rotasAdmin.get('/rendimento', validar(z.object({ de: campos.dataISO, ate: campos.dataISO }), 'query'), rota(async (req, res) => {
+  const { de, ate } = req.dados;
+  if (!tempo.dataISOValida(de) || !tempo.dataISOValida(ate) || ate < de || diasEntre(de, ate) >= MAX_DIAS_RENDIMENTO) {
+    throw erros.validacao({ ate: 'Escolha um período de até 1 ano.' });
+  }
+  const dias = diasEntre(de, ate) + 1;
+  const porMes = dias > 62;
+  const inicio = tempo.limitesDoDia(de).de;
+  const fim = tempo.limitesDoDia(ate).ate;
+  // Comparação justa: se o período ainda não acabou (ex.: "este mês"), compara só os dias que já passaram
+  // com o mesmo número de dias logo antes do período.
+  // Mês fechado (dia 1 ao último dia) compara com o mês anterior: 1 a 13 de outubro contra 1 a 13 de setembro.
+  const hoje = tempo.dataLocalISO(new Date());
+  const corridos = ate > hoje && hoje >= de ? diasEntre(de, hoje) + 1 : dias;
+  const mesInteiro = de.endsWith('-01') && tempo.somarDias(ate, 1).endsWith('-01') && de.slice(0, 7) === ate.slice(0, 7);
+  let anteriorDe;
+  let anteriorAte;
+  if (mesInteiro) {
+    anteriorDe = `${tempo.somarDias(de, -1).slice(0, 7)}-01`;
+    const fimMesAnterior = tempo.somarDias(de, -1);
+    anteriorAte = [tempo.somarDias(anteriorDe, corridos - 1), fimMesAnterior].sort()[0];
+  } else {
+    anteriorDe = tempo.somarDias(de, -dias);
+    anteriorAte = tempo.somarDias(anteriorDe, corridos - 1);
+  }
+
+  const [totais, faltas, anterior, porServico, serie] = await Promise.all([
+    umaLinha(`SELECT ${SOMAS} FROM agendamentos a WHERE a.inicio >= $1 AND a.inicio < $2`, [inicio, fim]),
+    umaLinha(
+      `SELECT COUNT(*) FILTER (WHERE status = 'faltou') AS faltas,
+              COALESCE(SUM(preco_centavos) FILTER (WHERE status = 'faltou'), 0) AS faltas_centavos,
+              COUNT(*) FILTER (WHERE status = 'cancelado') AS cancelados
+         FROM agendamentos WHERE inicio >= $1 AND inicio < $2`,
+      [inicio, fim],
+    ),
+    umaLinha(`SELECT ${SOMAS} FROM agendamentos a WHERE a.inicio >= $1 AND a.inicio < $2`, [tempo.limitesDoDia(anteriorDe).de, tempo.limitesDoDia(anteriorAte).ate]),
+    consulta(
+      `SELECT s.nome AS servico, ${SOMAS}
+         FROM agendamentos a JOIN servicos s ON s.id = a.servico_id
+        WHERE a.inicio >= $1 AND a.inicio < $2 AND a.status IN ('concluido', 'confirmado')
+        GROUP BY s.id, s.nome ORDER BY realizado_centavos DESC, a_receber_centavos DESC`,
+      [inicio, fim],
+    ),
+    consulta(
+      `SELECT to_char(date_trunc($3, a.inicio AT TIME ZONE $4), 'YYYY-MM-DD') AS periodo, ${SOMAS}
+         FROM agendamentos a WHERE a.inicio >= $1 AND a.inicio < $2
+        GROUP BY 1 ORDER BY 1`,
+      [inicio, fim, porMes ? 'month' : 'day', FUSO],
+    ),
+  ]);
+
+  const doPeriodo = new Map(serie.map((l) => [l.periodo, l]));
+  res.set('Cache-Control', 'no-store').json({
+    de,
+    ate,
+    agrupado_por: porMes ? 'mes' : 'dia',
+    totais: {
+      ...totais,
+      ...faltas,
+      ticket_medio_centavos: totais.atendimentos ? Math.round(totais.realizado_centavos / totais.atendimentos) : 0,
+    },
+    anterior: { de: anteriorDe, ate: anteriorAte, realizado_centavos: anterior.realizado_centavos, atendimentos: anterior.atendimentos },
+    por_servico: porServico,
+    serie: periodos(de, ate, porMes).map((p) => ({
+      periodo: p,
+      realizado_centavos: doPeriodo.get(p)?.realizado_centavos ?? 0,
+      a_receber_centavos: doPeriodo.get(p)?.a_receber_centavos ?? 0,
+      atendimentos: doPeriodo.get(p)?.atendimentos ?? 0,
+      agendados: doPeriodo.get(p)?.agendados ?? 0,
+    })),
+  });
 }));
 
 // Horários livres para o admin (sem a antecedência mínima)
 rotasAdmin.get('/horarios', validar(z.object({ servico: campos.slug, data: campos.dataISO, ignorar: campos.codigo.optional() }), 'query'), rota(async (req, res) => {
   let ignorarId = null;
-  if (req.dados.ignorar) ignorarId = (await umaLinha('SELECT id FROM agendamentos WHERE codigo = ?', [req.dados.ignorar]))?.id ?? null;
+  if (req.dados.ignorar) ignorarId = (await umaLinha('SELECT id FROM agendamentos WHERE codigo = $1', [req.dados.ignorar]))?.id ?? null;
   const { horarios } = await horariosDoDia({ slug: req.dados.servico, dataISO: req.dados.data, ignorarId, semAntecedencia: true });
   res.set('Cache-Control', 'no-store').json({ horarios });
 }));
@@ -79,7 +185,7 @@ rotasAdmin.post('/agendamentos', validar(esquemaNovo), rota(async (req, res) => 
   const d = req.dados;
   let cliente = null;
   if (d.email_cliente) {
-    cliente = await umaLinha("SELECT id, nome, telefone FROM usuarios WHERE email = ? AND excluido_em IS NULL AND papel = 'cliente'", [d.email_cliente]);
+    cliente = await umaLinha("SELECT id, nome, telefone FROM usuarios WHERE email = $1 AND excluido_em IS NULL AND papel = 'cliente'", [d.email_cliente]);
     if (!cliente) throw erros.validacao({ email_cliente: 'Nenhuma conta com esse e-mail.' });
   }
   const ag = await criarAgendamento({
@@ -109,7 +215,7 @@ rotasAdmin.post('/agendamentos/:codigo/cancelar', porCodigo, rota(async (req, re
   if (!r.success) throw erros.validacao({ motivo: 'Motivo muito longo.' });
   const ag = await cancelarAgendamento({ codigo: req.dados.codigo, porAdmin: true, motivo: r.data.motivo || null });
   await registrar(req, 'admin_cancelou', ag.codigo);
-  res.json({ agendamento: paraAdmin(await buscarAgendamento('a.id = ?', [ag.id])) });
+  res.json({ agendamento: paraAdmin(await buscarAgendamento('a.id = $1', [ag.id])) });
 }));
 
 rotasAdmin.post('/agendamentos/:codigo/remarcar', porCodigo, rota(async (req, res) => {
@@ -135,20 +241,19 @@ rotasAdmin.post('/bloqueios', validar(esquemaBloqueio), rota(async (req, res) =>
   const fim = d.dia_inteiro ? tempo.localParaUtc(tempo.somarDias(d.data, 1), 0) : tempo.localParaUtc(d.data, tempo.horaParaMinutos(d.ate));
   const barbeiroId = await barbeiroPadrao();
   const conflitos = await consulta(
-    "SELECT codigo, cliente_nome, inicio FROM agendamentos WHERE barbeiro_id = ? AND status = 'confirmado' AND inicio < ? AND fim > ?",
+    "SELECT codigo, cliente_nome, inicio FROM agendamentos WHERE barbeiro_id = $1 AND status = 'confirmado' AND inicio < $2 AND fim > $3",
     [barbeiroId, fim, inicio],
   );
-  const r = await consulta('INSERT INTO bloqueios (barbeiro_id, inicio, fim, motivo, criado_por) VALUES (?, ?, ?, ?, ?)', [
+  const { id } = await umaLinha('INSERT INTO bloqueios (barbeiro_id, inicio, fim, motivo, criado_por) VALUES ($1, $2, $3, $4, $5) RETURNING id', [
     barbeiroId, inicio, fim, d.motivo, req.usuario.id,
   ]);
-  await registrar(req, 'admin_bloqueou', String(r.insertId), { data: d.data });
+  await registrar(req, 'admin_bloqueou', String(id), { data: d.data });
   // O bloqueio não cancela ninguém sozinho: o painel mostra quem já estava marcado para o Fortão decidir
-  res.status(201).json({ id: r.insertId, conflitos: conflitos.map((c) => ({ codigo: c.codigo, cliente: c.cliente_nome, inicio: c.inicio })) });
+  res.status(201).json({ id, conflitos: conflitos.map((c) => ({ codigo: c.codigo, cliente: c.cliente_nome, inicio: c.inicio })) });
 }));
 
 rotasAdmin.delete('/bloqueios/:id', validar(z.object({ id: z.coerce.number().int().positive() }), 'params'), rota(async (req, res) => {
-  const r = await consulta('DELETE FROM bloqueios WHERE id = ?', [req.dados.id]);
-  if (!r.affectedRows) throw erros.naoEncontrado('Bloqueio não encontrado.');
+  if (!(await executar('DELETE FROM bloqueios WHERE id = $1', [req.dados.id]))) throw erros.naoEncontrado('Bloqueio não encontrado.');
   await registrar(req, 'admin_desbloqueou', String(req.dados.id));
   res.json({ ok: true });
 }));
@@ -170,13 +275,13 @@ rotasAdmin.get('/servicos', rota(async (_req, res) => {
 rotasAdmin.post('/servicos', validar(esquemaServico.extend({ slug: campos.slug })), rota(async (req, res) => {
   const d = req.dados;
   try {
-    const r = await consulta('INSERT INTO servicos (slug, nome, descricao, preco_centavos, duracao_min, ativo, ordem) VALUES (?, ?, ?, ?, ?, ?, ?)', [
-      d.slug, d.nome, d.descricao, d.preco_centavos, d.duracao_min, d.ativo ? 1 : 0, d.ordem,
+    const { id } = await umaLinha('INSERT INTO servicos (slug, nome, descricao, preco_centavos, duracao_min, ativo, ordem) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id', [
+      d.slug, d.nome, d.descricao, d.preco_centavos, d.duracao_min, d.ativo, d.ordem,
     ]);
     await registrar(req, 'admin_criou_servico', d.slug);
-    res.status(201).json({ id: r.insertId });
+    res.status(201).json({ id });
   } catch (e) {
-    if (e.code === 'ER_DUP_ENTRY') throw erros.validacao({ slug: 'Já existe um serviço com esse identificador.' });
+    if (e.code === PG.unico) throw erros.validacao({ nome: 'Já existe um serviço com esse nome.' });
     throw e;
   }
 }));
@@ -185,11 +290,22 @@ rotasAdmin.put('/servicos/:id', validar(z.object({ id: z.coerce.number().int().p
   const r = esquemaServico.safeParse(req.body);
   if (!r.success) throw erros.validacao({ servico: 'Dados do serviço inválidos.' });
   const d = r.data;
-  const out = await consulta('UPDATE servicos SET nome = ?, descricao = ?, preco_centavos = ?, duracao_min = ?, ativo = ?, ordem = ? WHERE id = ?', [
-    d.nome, d.descricao, d.preco_centavos, d.duracao_min, d.ativo ? 1 : 0, d.ordem, req.dados.id,
+  const mudou = await executar('UPDATE servicos SET nome = $1, descricao = $2, preco_centavos = $3, duracao_min = $4, ativo = $5, ordem = $6 WHERE id = $7', [
+    d.nome, d.descricao, d.preco_centavos, d.duracao_min, d.ativo, d.ordem, req.dados.id,
   ]);
-  if (!out.affectedRows) throw erros.naoEncontrado('Serviço não encontrado.');
+  if (!mudou) throw erros.naoEncontrado('Serviço não encontrado.');
   await registrar(req, 'admin_editou_servico', String(req.dados.id), d);
+  res.json({ ok: true });
+}));
+
+// Serviço que nunca foi marcado pode sumir de vez. Com histórico, ele só fica oculto: o rendimento antigo continua certo.
+rotasAdmin.delete('/servicos/:id', validar(z.object({ id: z.coerce.number().int().positive() }), 'params'), rota(async (req, res) => {
+  const usado = await umaLinha('SELECT 1 FROM agendamentos WHERE servico_id = $1 LIMIT 1', [req.dados.id]);
+  if (usado) {
+    throw erros.conflito('Esse serviço já tem horários no histórico. Desmarque "Aparece para os clientes" para escondê-lo.', 'servico_com_historico');
+  }
+  if (!(await executar('DELETE FROM servicos WHERE id = $1', [req.dados.id]))) throw erros.naoEncontrado('Serviço não encontrado.');
+  await registrar(req, 'admin_removeu_servico', String(req.dados.id));
   res.json({ ok: true });
 }));
 
@@ -201,7 +317,7 @@ const esquemaFuncionamento = z.object({
 rotasAdmin.get('/funcionamento', rota(async (_req, res) => {
   const barbeiroId = await barbeiroPadrao();
   const faixas = await consulta(
-    "SELECT dia_semana, TIME_FORMAT(abre, '%H:%i') AS abre, TIME_FORMAT(fecha, '%H:%i') AS fecha FROM horarios_funcionamento WHERE barbeiro_id = ? ORDER BY dia_semana, abre",
+    "SELECT dia_semana, to_char(abre, 'HH24:MI') AS abre, to_char(fecha, 'HH24:MI') AS fecha FROM horarios_funcionamento WHERE barbeiro_id = $1 ORDER BY dia_semana, abre",
     [barbeiroId],
   );
   res.json({ faixas });
@@ -218,9 +334,9 @@ rotasAdmin.put('/funcionamento', validar(esquemaFuncionamento), rota(async (req,
     porDia.set(f.dia_semana, lista);
   }
   await transacao(async (conn) => {
-    await consulta('DELETE FROM horarios_funcionamento WHERE barbeiro_id = ?', [barbeiroId], conn);
+    await executar('DELETE FROM horarios_funcionamento WHERE barbeiro_id = $1', [barbeiroId], conn);
     for (const f of req.dados.faixas) {
-      await consulta('INSERT INTO horarios_funcionamento (barbeiro_id, dia_semana, abre, fecha) VALUES (?, ?, ?, ?)', [barbeiroId, f.dia_semana, f.abre, f.fecha], conn);
+      await executar('INSERT INTO horarios_funcionamento (barbeiro_id, dia_semana, abre, fecha) VALUES ($1, $2, $3, $4)', [barbeiroId, f.dia_semana, f.abre, f.fecha], conn);
     }
   });
   await registrar(req, 'admin_funcionamento', null, { faixas: req.dados.faixas.length });
@@ -268,13 +384,13 @@ rotasAdmin.get('/clientes', validar(z.object({ q: z.string().trim().max(80).opti
   const q = req.dados.q ? `%${req.dados.q.replace(/[%_\\]/g, (c) => `\\${c}`)}%` : '%';
   const clientes = await consulta(
     `SELECT u.id, u.nome, u.email, u.telefone, u.email_verificado_em IS NOT NULL AS verificado, u.criado_em,
-            COUNT(a.id) AS total, SUM(a.status = 'concluido') AS concluidos, SUM(a.status = 'faltou') AS faltas, MAX(a.inicio) AS ultimo
-       FROM usuarios u LEFT JOIN agendamentos a ON a.cliente_id = u.id AND a.status IN (?)
-      WHERE u.papel = 'cliente' AND u.excluido_em IS NULL AND (u.nome LIKE ? OR u.email LIKE ? OR u.telefone LIKE ?)
-      GROUP BY u.id ORDER BY ultimo IS NULL, ultimo DESC, u.criado_em DESC LIMIT 100`,
-    [STATUS_OCUPA, q, q, q],
+            COUNT(a.id) AS total, COUNT(*) FILTER (WHERE a.status = 'concluido') AS concluidos,
+            COUNT(*) FILTER (WHERE a.status = 'faltou') AS faltas, MAX(a.inicio) AS ultimo,
+            COALESCE(SUM(a.preco_centavos) FILTER (WHERE a.status = 'concluido'), 0) AS gasto_centavos
+       FROM usuarios u LEFT JOIN agendamentos a ON a.cliente_id = u.id AND a.status = ANY($1::text[])
+      WHERE u.papel = 'cliente' AND u.excluido_em IS NULL AND (u.nome ILIKE $2 OR u.email ILIKE $2 OR u.telefone ILIKE $2)
+      GROUP BY u.id ORDER BY ultimo DESC NULLS LAST, u.criado_em DESC LIMIT 100`,
+    [STATUS_OCUPA, q],
   );
-  res.set('Cache-Control', 'no-store').json({
-    clientes: clientes.map((c) => ({ ...c, verificado: Boolean(c.verificado), total: Number(c.total), concluidos: Number(c.concluidos ?? 0), faltas: Number(c.faltas ?? 0) })),
-  });
+  res.set('Cache-Control', 'no-store').json({ clientes });
 }));

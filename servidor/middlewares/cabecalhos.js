@@ -14,7 +14,6 @@ export const cabecalhos = helmet({
       connectSrc: ["'self'"],
       // Só o mapa do Google, e só depois que o cliente toca em "Carregar mapa"
       frameSrc: ['https://www.google.com'],
-      manifestSrc: ["'self'"],
       workerSrc: ["'self'"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],

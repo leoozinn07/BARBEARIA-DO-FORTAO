@@ -1,207 +1,254 @@
--- Esquema inicial da Barbearia do Fortão.
--- Datas em UTC. Dinheiro em centavos. Textos em utf8mb4.
+-- Esquema da Barbearia do Fortão (Postgres no Supabase).
+--
+-- Segurança:
+-- * Tudo fica no schema "barbearia". A API automática do Supabase (PostgREST) só expõe "public",
+--   então nenhuma tabela daqui é alcançável com a chave pública do projeto.
+-- * RLS ligado em todas as tabelas, sem nenhuma política: os papéis anon e authenticated não leem nem gravam nada.
+--   Só o servidor Node acessa, com o usuário dono das tabelas.
+-- * Dois horários nunca se sobrepõem: o próprio banco recusa (restrição de exclusão no fim do arquivo).
+--
+-- Datas em timestamptz (UTC). Dinheiro em centavos.
 
-CREATE TABLE usuarios (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  nome VARCHAR(120) NOT NULL,
-  email VARCHAR(190) NOT NULL,
-  telefone VARCHAR(20) NULL,
-  senha_hash VARCHAR(255) NOT NULL,
-  papel ENUM('cliente', 'admin') NOT NULL DEFAULT 'cliente',
-  email_verificado_em DATETIME NULL,
-  marketing TINYINT(1) NOT NULL DEFAULT 0,
-  preferencias JSON NULL,
-  tentativas_falhas SMALLINT UNSIGNED NOT NULL DEFAULT 0,
-  bloqueado_ate DATETIME NULL,
-  excluido_em DATETIME NULL,
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_usuarios_email (email)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+DO $$
+BEGIN
+  -- No Supabase as extensões moram no schema "extensions"
+  IF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'extensions') THEN
+    CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA extensions;
+  ELSE
+    CREATE EXTENSION IF NOT EXISTS btree_gist;
+  END IF;
+END $$;
 
-CREATE TABLE sessoes (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  usuario_id BIGINT UNSIGNED NOT NULL,
-  token_hash CHAR(64) NOT NULL,
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  expira_em DATETIME NOT NULL,
-  ultimo_uso_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  ip VARCHAR(45) NULL,
-  agente VARCHAR(255) NULL,
-  UNIQUE KEY uq_sessoes_token (token_hash),
-  KEY ix_sessoes_usuario (usuario_id),
-  CONSTRAINT fk_sessoes_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+-- Atualiza a coluna atualizado_em em todo UPDATE
+CREATE FUNCTION barbearia.tocar_atualizado_em() RETURNS trigger
+LANGUAGE plpgsql SET search_path = '' AS $$
+BEGIN
+  NEW.atualizado_em := now();
+  RETURN NEW;
+END $$;
 
-CREATE TABLE tokens_uso_unico (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  usuario_id BIGINT UNSIGNED NOT NULL,
-  tipo ENUM('verificar_email', 'redefinir_senha') NOT NULL,
-  token_hash CHAR(64) NOT NULL,
-  expira_em DATETIME NOT NULL,
-  usado_em DATETIME NULL,
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_tokens_hash (token_hash),
-  KEY ix_tokens_usuario (usuario_id, tipo),
-  CONSTRAINT fk_tokens_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE barbearia.usuarios (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  nome varchar(120) NOT NULL,
+  email varchar(190) NOT NULL,
+  telefone varchar(20),
+  senha_hash varchar(255) NOT NULL,
+  papel text NOT NULL DEFAULT 'cliente',
+  email_verificado_em timestamptz,
+  marketing boolean NOT NULL DEFAULT false,
+  preferencias jsonb,
+  tentativas_falhas smallint NOT NULL DEFAULT 0,
+  bloqueado_ate timestamptz,
+  excluido_em timestamptz,
+  criado_em timestamptz NOT NULL DEFAULT now(),
+  atualizado_em timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_usuarios_email UNIQUE (email),
+  CONSTRAINT ck_usuarios_email_minusculo CHECK (email = lower(email)),
+  CONSTRAINT ck_usuarios_papel CHECK (papel IN ('cliente', 'admin'))
+);
 
-CREATE TABLE consentimentos (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  usuario_id BIGINT UNSIGNED NOT NULL,
-  tipo ENUM('termos', 'privacidade', 'marketing') NOT NULL,
-  versao VARCHAR(20) NOT NULL,
-  aceito TINYINT(1) NOT NULL,
-  ip VARCHAR(45) NULL,
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  KEY ix_consentimentos_usuario (usuario_id, tipo),
-  CONSTRAINT fk_consentimentos_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE barbearia.sessoes (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  usuario_id bigint NOT NULL REFERENCES barbearia.usuarios (id) ON DELETE CASCADE,
+  token_hash char(64) NOT NULL,
+  criado_em timestamptz NOT NULL DEFAULT now(),
+  expira_em timestamptz NOT NULL,
+  ultimo_uso_em timestamptz NOT NULL DEFAULT now(),
+  ip varchar(45),
+  agente varchar(255),
+  CONSTRAINT uq_sessoes_token UNIQUE (token_hash)
+);
+CREATE INDEX ix_sessoes_usuario ON barbearia.sessoes (usuario_id);
+CREATE INDEX ix_sessoes_expira ON barbearia.sessoes (expira_em);
 
-CREATE TABLE barbeiros (
-  id SMALLINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  nome VARCHAR(80) NOT NULL,
-  usuario_id BIGINT UNSIGNED NULL,
-  ativo TINYINT(1) NOT NULL DEFAULT 1,
-  CONSTRAINT fk_barbeiros_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE barbearia.tokens_uso_unico (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  usuario_id bigint NOT NULL REFERENCES barbearia.usuarios (id) ON DELETE CASCADE,
+  tipo text NOT NULL,
+  token_hash char(64) NOT NULL,
+  expira_em timestamptz NOT NULL,
+  usado_em timestamptz,
+  criado_em timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_tokens_hash UNIQUE (token_hash),
+  CONSTRAINT ck_tokens_tipo CHECK (tipo IN ('verificar_email', 'redefinir_senha'))
+);
+CREATE INDEX ix_tokens_usuario ON barbearia.tokens_uso_unico (usuario_id, tipo);
 
-CREATE TABLE servicos (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  slug VARCHAR(60) NOT NULL,
-  nome VARCHAR(80) NOT NULL,
-  descricao VARCHAR(255) NOT NULL DEFAULT '',
-  preco_centavos INT UNSIGNED NOT NULL,
-  duracao_min SMALLINT UNSIGNED NOT NULL,
-  ativo TINYINT(1) NOT NULL DEFAULT 1,
-  ordem SMALLINT NOT NULL DEFAULT 0,
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_servicos_slug (slug)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE barbearia.consentimentos (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  usuario_id bigint NOT NULL REFERENCES barbearia.usuarios (id) ON DELETE CASCADE,
+  tipo text NOT NULL,
+  versao varchar(20) NOT NULL,
+  aceito boolean NOT NULL,
+  ip varchar(45),
+  criado_em timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT ck_consentimentos_tipo CHECK (tipo IN ('termos', 'privacidade', 'marketing'))
+);
+CREATE INDEX ix_consentimentos_usuario ON barbearia.consentimentos (usuario_id, tipo);
+
+CREATE TABLE barbearia.barbeiros (
+  id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  nome varchar(80) NOT NULL,
+  usuario_id bigint REFERENCES barbearia.usuarios (id) ON DELETE SET NULL,
+  ativo boolean NOT NULL DEFAULT true
+);
+CREATE INDEX ix_barbeiros_usuario ON barbearia.barbeiros (usuario_id);
+
+CREATE TABLE barbearia.servicos (
+  id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  slug varchar(60) NOT NULL,
+  nome varchar(80) NOT NULL,
+  descricao varchar(255) NOT NULL DEFAULT '',
+  preco_centavos integer NOT NULL,
+  duracao_min smallint NOT NULL,
+  ativo boolean NOT NULL DEFAULT true,
+  ordem smallint NOT NULL DEFAULT 0,
+  criado_em timestamptz NOT NULL DEFAULT now(),
+  atualizado_em timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_servicos_slug UNIQUE (slug),
+  CONSTRAINT ck_servicos_preco CHECK (preco_centavos >= 0),
+  CONSTRAINT ck_servicos_duracao CHECK (duracao_min BETWEEN 5 AND 480)
+);
 
 -- Faixas de atendimento por dia da semana (0 = domingo). Mais de uma faixa no dia = pausa entre elas.
-CREATE TABLE horarios_funcionamento (
-  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  barbeiro_id SMALLINT UNSIGNED NOT NULL,
-  dia_semana TINYINT UNSIGNED NOT NULL,
-  abre TIME NOT NULL,
-  fecha TIME NOT NULL,
-  KEY ix_horarios_barbeiro (barbeiro_id, dia_semana),
-  CONSTRAINT fk_horarios_barbeiro FOREIGN KEY (barbeiro_id) REFERENCES barbeiros (id) ON DELETE CASCADE,
+CREATE TABLE barbearia.horarios_funcionamento (
+  id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  barbeiro_id integer NOT NULL REFERENCES barbearia.barbeiros (id) ON DELETE CASCADE,
+  dia_semana smallint NOT NULL,
+  abre time NOT NULL,
+  fecha time NOT NULL,
   CONSTRAINT ck_horarios_dia CHECK (dia_semana BETWEEN 0 AND 6),
   CONSTRAINT ck_horarios_faixa CHECK (abre < fecha)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+);
+CREATE INDEX ix_horarios_barbeiro ON barbearia.horarios_funcionamento (barbeiro_id, dia_semana);
 
-CREATE TABLE bloqueios (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  barbeiro_id SMALLINT UNSIGNED NOT NULL,
-  inicio DATETIME NOT NULL,
-  fim DATETIME NOT NULL,
-  motivo VARCHAR(160) NOT NULL DEFAULT '',
-  criado_por BIGINT UNSIGNED NULL,
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  KEY ix_bloqueios_barbeiro (barbeiro_id, inicio),
-  CONSTRAINT fk_bloqueios_barbeiro FOREIGN KEY (barbeiro_id) REFERENCES barbeiros (id) ON DELETE CASCADE,
+CREATE TABLE barbearia.bloqueios (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  barbeiro_id integer NOT NULL REFERENCES barbearia.barbeiros (id) ON DELETE CASCADE,
+  inicio timestamptz NOT NULL,
+  fim timestamptz NOT NULL,
+  motivo varchar(160) NOT NULL DEFAULT '',
+  criado_por bigint REFERENCES barbearia.usuarios (id) ON DELETE SET NULL,
+  criado_em timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT ck_bloqueios_periodo CHECK (inicio < fim)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+);
+CREATE INDEX ix_bloqueios_barbeiro ON barbearia.bloqueios (barbeiro_id, inicio);
+CREATE INDEX ix_bloqueios_criado_por ON barbearia.bloqueios (criado_por);
 
-CREATE TABLE agendamentos (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  codigo CHAR(8) NOT NULL,
-  cliente_id BIGINT UNSIGNED NULL,
-  cliente_nome VARCHAR(120) NOT NULL,
-  cliente_telefone VARCHAR(20) NULL,
-  barbeiro_id SMALLINT UNSIGNED NOT NULL,
-  servico_id INT UNSIGNED NOT NULL,
-  servico_nome VARCHAR(80) NOT NULL,
-  preco_centavos INT UNSIGNED NOT NULL,
-  duracao_min SMALLINT UNSIGNED NOT NULL,
-  inicio DATETIME NOT NULL,
-  fim DATETIME NOT NULL,
-  status ENUM('confirmado', 'concluido', 'cancelado', 'faltou') NOT NULL DEFAULT 'confirmado',
-  origem ENUM('app', 'admin') NOT NULL DEFAULT 'app',
-  observacao VARCHAR(255) NULL,
-  cancelado_por ENUM('cliente', 'admin') NULL,
-  motivo_cancelamento VARCHAR(255) NULL,
-  lembrete_24h_em DATETIME NULL,
-  lembrete_2h_em DATETIME NULL,
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_agendamentos_codigo (codigo),
-  KEY ix_agendamentos_barbeiro (barbeiro_id, inicio),
-  KEY ix_agendamentos_cliente (cliente_id, inicio),
-  KEY ix_agendamentos_status (status, inicio),
-  CONSTRAINT fk_agendamentos_cliente FOREIGN KEY (cliente_id) REFERENCES usuarios (id) ON DELETE SET NULL,
-  CONSTRAINT fk_agendamentos_barbeiro FOREIGN KEY (barbeiro_id) REFERENCES barbeiros (id),
-  CONSTRAINT fk_agendamentos_servico FOREIGN KEY (servico_id) REFERENCES servicos (id),
-  CONSTRAINT ck_agendamentos_periodo CHECK (inicio < fim)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+-- Nome, serviço e preço são copiados no momento da marcação: mudar o preço depois não altera o que já foi marcado
+-- e o rendimento de cada mês continua certo.
+CREATE TABLE barbearia.agendamentos (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  codigo char(8) NOT NULL,
+  cliente_id bigint REFERENCES barbearia.usuarios (id) ON DELETE SET NULL,
+  cliente_nome varchar(120) NOT NULL,
+  cliente_telefone varchar(20),
+  barbeiro_id integer NOT NULL REFERENCES barbearia.barbeiros (id),
+  servico_id integer NOT NULL REFERENCES barbearia.servicos (id),
+  servico_nome varchar(80) NOT NULL,
+  preco_centavos integer NOT NULL,
+  duracao_min smallint NOT NULL,
+  inicio timestamptz NOT NULL,
+  fim timestamptz NOT NULL,
+  status text NOT NULL DEFAULT 'confirmado',
+  origem text NOT NULL DEFAULT 'site',
+  observacao varchar(255),
+  cancelado_por text,
+  motivo_cancelamento varchar(255),
+  lembrete_24h_em timestamptz,
+  lembrete_2h_em timestamptz,
+  criado_em timestamptz NOT NULL DEFAULT now(),
+  atualizado_em timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_agendamentos_codigo UNIQUE (codigo),
+  CONSTRAINT ck_agendamentos_periodo CHECK (inicio < fim),
+  CONSTRAINT ck_agendamentos_status CHECK (status IN ('confirmado', 'concluido', 'cancelado', 'faltou')),
+  CONSTRAINT ck_agendamentos_origem CHECK (origem IN ('site', 'admin')),
+  CONSTRAINT ck_agendamentos_cancelado_por CHECK (cancelado_por IS NULL OR cancelado_por IN ('cliente', 'admin')),
+  -- A cadeira não tem dois clientes ao mesmo tempo. Horário cancelado libera a vaga.
+  CONSTRAINT ex_agendamentos_sem_sobreposicao EXCLUDE USING gist (
+    barbeiro_id WITH =,
+    tstzrange(inicio, fim) WITH &&
+  ) WHERE (status <> 'cancelado')
+);
+CREATE INDEX ix_agendamentos_barbeiro ON barbearia.agendamentos (barbeiro_id, inicio);
+CREATE INDEX ix_agendamentos_cliente ON barbearia.agendamentos (cliente_id, inicio);
+CREATE INDEX ix_agendamentos_status ON barbearia.agendamentos (status, inicio);
+CREATE INDEX ix_agendamentos_servico ON barbearia.agendamentos (servico_id);
 
--- Uma linha por barbeiro e dia. Marcar ou remarcar trava esta linha com SELECT ... FOR UPDATE,
--- então dois pedidos para o mesmo dia passam um de cada vez e nunca gravam horários sobrepostos.
-CREATE TABLE agenda_travas (
-  barbeiro_id SMALLINT UNSIGNED NOT NULL,
-  dia DATE NOT NULL,
-  PRIMARY KEY (barbeiro_id, dia)
-) ENGINE=InnoDB;
-
-CREATE TABLE notificacoes (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  usuario_id BIGINT UNSIGNED NOT NULL,
-  tipo VARCHAR(40) NOT NULL,
-  titulo VARCHAR(120) NOT NULL,
-  corpo VARCHAR(500) NOT NULL,
-  link VARCHAR(255) NULL,
-  lida_em DATETIME NULL,
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  KEY ix_notificacoes_usuario (usuario_id, criado_em),
-  CONSTRAINT fk_notificacoes_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-CREATE TABLE push_inscricoes (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  usuario_id BIGINT UNSIGNED NOT NULL,
-  endpoint VARCHAR(700) NOT NULL,
-  endpoint_hash CHAR(64) NOT NULL,
-  p256dh VARCHAR(255) NOT NULL,
-  auth VARCHAR(255) NOT NULL,
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_push_endpoint (endpoint_hash),
-  KEY ix_push_usuario (usuario_id),
-  CONSTRAINT fk_push_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE barbearia.notificacoes (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  usuario_id bigint NOT NULL REFERENCES barbearia.usuarios (id) ON DELETE CASCADE,
+  tipo varchar(40) NOT NULL,
+  titulo varchar(120) NOT NULL,
+  corpo varchar(500) NOT NULL,
+  link varchar(255),
+  lida_em timestamptz,
+  criado_em timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX ix_notificacoes_usuario ON barbearia.notificacoes (usuario_id, criado_em);
 
 -- Fila de saída de e-mails (outbox): gravada na mesma transação do evento, entregue depois com novas tentativas.
-CREATE TABLE emails_saida (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  para VARCHAR(190) NOT NULL,
-  assunto VARCHAR(200) NOT NULL,
-  html MEDIUMTEXT NOT NULL,
-  texto TEXT NOT NULL,
-  anexos JSON NULL,
-  tentativas TINYINT UNSIGNED NOT NULL DEFAULT 0,
-  proxima_tentativa_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  enviado_em DATETIME NULL,
-  erro VARCHAR(500) NULL,
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  KEY ix_emails_pendentes (enviado_em, proxima_tentativa_em)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE barbearia.emails_saida (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  para varchar(190) NOT NULL,
+  assunto varchar(200) NOT NULL,
+  html text NOT NULL,
+  texto text NOT NULL,
+  anexos jsonb,
+  tentativas smallint NOT NULL DEFAULT 0,
+  proxima_tentativa_em timestamptz NOT NULL DEFAULT now(),
+  enviado_em timestamptz,
+  erro varchar(500),
+  criado_em timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX ix_emails_pendentes ON barbearia.emails_saida (proxima_tentativa_em) WHERE enviado_em IS NULL;
 
-CREATE TABLE configuracoes (
-  chave VARCHAR(60) PRIMARY KEY,
-  valor JSON NOT NULL,
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE barbearia.configuracoes (
+  chave varchar(60) PRIMARY KEY,
+  valor jsonb NOT NULL,
+  atualizado_em timestamptz NOT NULL DEFAULT now()
+);
 
-CREATE TABLE auditoria (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  usuario_id BIGINT UNSIGNED NULL,
-  acao VARCHAR(60) NOT NULL,
-  alvo VARCHAR(120) NULL,
-  detalhes JSON NULL,
-  ip VARCHAR(45) NULL,
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  KEY ix_auditoria_data (criado_em),
-  KEY ix_auditoria_usuario (usuario_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE barbearia.auditoria (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  usuario_id bigint,
+  acao varchar(60) NOT NULL,
+  alvo varchar(120),
+  detalhes jsonb,
+  ip varchar(45),
+  criado_em timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX ix_auditoria_data ON barbearia.auditoria (criado_em);
+CREATE INDEX ix_auditoria_usuario ON barbearia.auditoria (usuario_id);
+
+CREATE TRIGGER tg_usuarios_atualizado BEFORE UPDATE ON barbearia.usuarios FOR EACH ROW EXECUTE FUNCTION barbearia.tocar_atualizado_em();
+CREATE TRIGGER tg_servicos_atualizado BEFORE UPDATE ON barbearia.servicos FOR EACH ROW EXECUTE FUNCTION barbearia.tocar_atualizado_em();
+CREATE TRIGGER tg_agendamentos_atualizado BEFORE UPDATE ON barbearia.agendamentos FOR EACH ROW EXECUTE FUNCTION barbearia.tocar_atualizado_em();
+CREATE TRIGGER tg_configuracoes_atualizado BEFORE UPDATE ON barbearia.configuracoes FOR EACH ROW EXECUTE FUNCTION barbearia.tocar_atualizado_em();
+
+-- ------------------------------------------------------------------ portas fechadas
+DO $$
+DECLARE
+  tabela text;
+BEGIN
+  FOR tabela IN SELECT tablename FROM pg_tables WHERE schemaname = 'barbearia' LOOP
+    EXECUTE format('ALTER TABLE barbearia.%I ENABLE ROW LEVEL SECURITY', tabela);
+  END LOOP;
+END $$;
+
+REVOKE ALL ON SCHEMA barbearia FROM PUBLIC;
+REVOKE ALL ON FUNCTION barbearia.tocar_atualizado_em() FROM PUBLIC;
+
+DO $$
+BEGIN
+  -- Papéis que o Supabase usa na API pública. Fora do Supabase eles não existem e este bloco não faz nada.
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') AND EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+    REVOKE ALL ON ALL TABLES IN SCHEMA barbearia FROM anon, authenticated;
+    REVOKE ALL ON ALL SEQUENCES IN SCHEMA barbearia FROM anon, authenticated;
+    REVOKE ALL ON ALL FUNCTIONS IN SCHEMA barbearia FROM anon, authenticated;
+    REVOKE ALL ON SCHEMA barbearia FROM anon, authenticated;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA barbearia REVOKE ALL ON TABLES FROM anon, authenticated;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA barbearia REVOKE ALL ON SEQUENCES FROM anon, authenticated;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA barbearia REVOKE ALL ON FUNCTIONS FROM anon, authenticated;
+  END IF;
+END $$;

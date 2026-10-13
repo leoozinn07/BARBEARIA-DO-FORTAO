@@ -1,6 +1,6 @@
-// Minha conta: horários (remarcar, cancelar, agenda do celular), perfil, aparência, notificações, senha e LGPD.
+// Minha conta: horários (remarcar, cancelar, agenda do celular), perfil, aparência, senha e LGPD.
 import { get, invalidarSessao, patch, post } from './api.js';
-import { ativarPush, desativarPush, iniciarCasca, obterConfig } from './casca.js';
+import { iniciarCasca, obterConfig } from './casca.js';
 import { montarAgendamento } from './agendamento.js';
 import {
   abrirFolha, dataCurta, h, hora, icone, ligarVerSenha, limparErros, mostrarErros, ocupado, primeiroNome, quando, reais, telefoneBonito, toast, toastErro,
@@ -179,28 +179,6 @@ async function salvarPreferencias(mudanca) {
   try { await patch('/conta', { preferencias: mudanca }); } catch (e) { toastErro(e); }
 }
 
-// Notificações push
-const pushBotao = $('[data-push-botao]');
-const pushEstado = $('[data-push-estado]');
-async function estadoPush() {
-  const cfg = await obterConfig();
-  if (!cfg?.push || !('Notification' in window) || !('serviceWorker' in navigator)) {
-    pushEstado.textContent = 'Este navegador não aceita notificações. No app Android elas funcionam.';
-    pushBotao.hidden = true;
-    return;
-  }
-  const inscricao = await (await navigator.serviceWorker.ready).pushManager.getSubscription();
-  const ativo = Notification.permission === 'granted' && Boolean(inscricao);
-  pushEstado.textContent = ativo ? 'Ativadas neste aparelho.' : Notification.permission === 'denied' ? 'Bloqueadas nas configurações do navegador.' : 'Receba o lembrete do corte mesmo com o app fechado.';
-  pushBotao.textContent = ativo ? 'Desativar' : 'Ativar';
-  pushBotao.disabled = Notification.permission === 'denied';
-  pushBotao.onclick = async () => {
-    if (ativo) await desativarPush(); else await ativarPush();
-    estadoPush();
-  };
-}
-estadoPush();
-
 // Trocar senha
 const formSenha = $('[data-form-senha]');
 formSenha.addEventListener('submit', async (ev) => {
@@ -236,7 +214,6 @@ formExcluir.addEventListener('submit', async (ev) => {
   ocupado(botao, true);
   try {
     await post('/conta/excluir', { senha: formExcluir.elements.senha.value });
-    await desativarPush().catch(() => {});
     try { localStorage.clear(); sessionStorage.clear(); } catch { /* sem armazenamento */ }
     location.replace('/?conta=excluida');
   } catch (e) {

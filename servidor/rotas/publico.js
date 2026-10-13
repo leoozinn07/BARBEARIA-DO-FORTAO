@@ -6,7 +6,6 @@ import { garantirTokenCsrf } from '../middlewares/csrf.js';
 import { campos, validar, z } from '../lib/validacao.js';
 import { barbeiroPadrao, diasDisponiveis, horariosDoDia, listarServicos } from '../servicos/agenda.js';
 import { lerConfiguracoes } from '../servicos/configuracoes.js';
-import { pushAtivo } from '../servicos/push.js';
 import { rota, usuarioPublico } from './comum.js';
 
 export const rotasPublicas = Router();
@@ -25,7 +24,7 @@ rotasPublicas.get('/config', rota(async (_req, res) => {
   const { negocio, agenda } = await lerConfiguracoes();
   const barbeiroId = await barbeiroPadrao();
   const faixas = await consulta(
-    "SELECT dia_semana, TIME_FORMAT(abre, '%H:%i') AS abre, TIME_FORMAT(fecha, '%H:%i') AS fecha FROM horarios_funcionamento WHERE barbeiro_id = ? ORDER BY dia_semana, abre",
+    "SELECT dia_semana, to_char(abre, 'HH24:MI') AS abre, to_char(fecha, 'HH24:MI') AS fecha FROM horarios_funcionamento WHERE barbeiro_id = $1 ORDER BY dia_semana, abre",
     [barbeiroId],
   );
   res.set('Cache-Control', 'public, max-age=60').json({
@@ -36,7 +35,6 @@ rotasPublicas.get('/config', rota(async (_req, res) => {
     },
     agenda: { janela_dias: agenda.janela_dias, cancelar_ate_horas: agenda.cancelar_ate_horas, antecedencia_min: agenda.antecedencia_min },
     funcionamento: faixas,
-    push: pushAtivo ? config.push.publica : null,
     versoes: { termos: config.versaoTermos, privacidade: config.versaoPrivacidade },
   });
 }));

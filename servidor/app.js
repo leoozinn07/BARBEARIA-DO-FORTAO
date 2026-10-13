@@ -23,14 +23,6 @@ export function criarApp() {
   app.set('trust proxy', config.confiarProxy);
   app.use(cabecalhos, politicaPermissoes, compression());
 
-  // Digital Asset Links: liga o app Android (TWA) a este domínio, sem barra de endereço
-  app.get('/.well-known/assetlinks.json', (_req, res) => {
-    const vinculos = config.twa.pacote && config.twa.sha256.length
-      ? [{ relation: ['delegate_permission/common.handle_all_urls'], target: { namespace: 'android_app', package_name: config.twa.pacote, sha256_cert_fingerprints: config.twa.sha256 } }]
-      : [];
-    res.json(vinculos);
-  });
-
   // Páginas que exigem login: redireciona antes de mostrar a página vazia
   const exigirPagina = (papel) => [cookieParser(), carregarSessao, (req, res, next) => {
     if (!req.usuario) return res.redirect(302, `/entrar?volta=${encodeURIComponent(req.originalUrl)}`);
@@ -44,14 +36,13 @@ export function criarApp() {
   app.use(express.static(PUBLICO, {
     index: false,
     setHeaders(res, arquivo) {
-      if (arquivo.endsWith('.html') || arquivo.endsWith('sw.js') || arquivo.endsWith('.webmanifest')) {
+      if (arquivo.endsWith('.html')) {
         res.setHeader('Cache-Control', 'no-cache');
       } else if (/\.(woff2|png|jpg|webp|svg|ico)$/.test(arquivo)) {
         res.setHeader('Cache-Control', 'public, max-age=2592000');
       } else {
         res.setHeader('Cache-Control', 'public, max-age=3600');
       }
-      if (arquivo.endsWith('sw.js')) res.setHeader('Service-Worker-Allowed', '/');
     },
   }));
 

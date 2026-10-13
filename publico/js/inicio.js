@@ -1,6 +1,6 @@
 // Página inicial: saudação, próximo horário livre, agendamento em 3 toques, tabela, frase do dia e endereço.
 import { get, post } from './api.js';
-import { ativarPush, iniciarCasca, obterConfig } from './casca.js';
+import { iniciarCasca, obterConfig } from './casca.js';
 import { esquecerEscolha, montarAgendamento } from './agendamento.js';
 import { abrirFolha, dataCurta, h, primeiroNome, quando, reais } from './ui.js';
 
@@ -36,9 +36,6 @@ montarAgendamento($('[data-agendamento]'), {
     const { agendamento } = await post('/agendamentos', { servico: servico.slug, inicio });
     esquecerEscolha();
     $('[data-sucesso-texto]').textContent = `${agendamento.servico}, ${quando(agendamento.inicio)}. Valor: ${reais(agendamento.preco_centavos)}, pago na barbearia.`;
-    const botaoPush = $('[data-sucesso-push]');
-    botaoPush.hidden = !('Notification' in window) || Notification.permission !== 'default' || !(await obterConfig())?.push;
-    botaoPush.onclick = async () => { if (await ativarPush()) botaoPush.hidden = true; };
     abrirFolha(folhaSucesso);
     folhaSucesso.addEventListener('close', () => location.reload(), { once: true });
   },
@@ -83,7 +80,7 @@ obterConfig().then((cfg) => {
   }
   if (n.whatsapp) {
     const w = $('[data-whatsapp]');
-    w.href = `https://wa.me/${n.whatsapp.startsWith('55') ? '' : '55'}${n.whatsapp}?text=${encodeURIComponent('Fala, Fortão! Vim pelo app.')}`;
+    w.href = `https://wa.me/${n.whatsapp.startsWith('55') ? '' : '55'}${n.whatsapp}?text=${encodeURIComponent('Fala, Fortão! Vim pelo site.')}`;
     w.hidden = false;
   }
   // Agrupa dias com o mesmo horário: "Ter a Sex, 9h às 20h"

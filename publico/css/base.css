@@ -1,6 +1,6 @@
 /* =========================================================================
    Barbearia do Fortão: sistema visual (base da opção C "Cadeira")
-   Preto e cinza. Tema escuro padrão, claro opcional, modo letra grande.
+   Preto e cinza, com dourado só em detalhes e no toque. Tema escuro padrão, claro opcional, modo letra grande.
    Raios: cartões 24px, campos 14px, botões e chips em pílula.
    Camadas: topo 40, abas 50, avisos 60, folhas 70, notificação 90.
    ========================================================================= */
@@ -29,6 +29,10 @@
   --vidro: rgb(21 21 23 / 0.74);
   --sombra: 0 24px 48px -24px rgb(0 0 0 / 0.75);
   --foco: #f2f2f3;
+  /* Dourado: preço da tabela, contador, escolha marcada, gráfico de rendimento e o contorno de toque */
+  --ouro: #d4af37;
+  --ouro-fundo: rgb(212 175 55 / 0.14);
+  --ouro-texto: #0b0b0c;
 
   --raio: 24px;
   --raio-campo: 14px;
@@ -60,6 +64,10 @@
   --vidro: rgb(250 250 250 / 0.82);
   --sombra: 0 20px 40px -24px rgb(20 20 25 / 0.35);
   --foco: #0f0f10;
+  /* Mais escuro no claro, para o texto dourado ter contraste */
+  --ouro: #8a6609;
+  --ouro-fundo: rgb(138 102 9 / 0.12);
+  --ouro-texto: #ffffff;
 }
 @media (prefers-color-scheme: light) {
   :root[data-tema="auto"] {
@@ -70,6 +78,7 @@
     --cta-bg: #0f0f10; --cta-fg: #f2f2f3; --ativo-bg: #0f0f10; --ativo-fg: #f2f2f3;
     --erro: #b42318; --erro-fundo: rgb(180 35 24 / 0.08); --ok: #157a3c;
     --vidro: rgb(250 250 250 / 0.82); --sombra: 0 20px 40px -24px rgb(20 20 25 / 0.35); --foco: #0f0f10;
+    --ouro: #8a6609; --ouro-fundo: rgb(138 102 9 / 0.12); --ouro-texto: #ffffff;
   }
 }
 /* Letra grande: tudo em rem cresce junto */
@@ -126,7 +135,7 @@ main { padding-bottom: 24px; }
 }
 .icone-botao { position: relative; width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; font-size: 1.35rem; background: var(--sup); border: 1px solid var(--borda); text-decoration: none; transition: transform 160ms var(--ease-out), background-color 200ms ease; }
 .icone-botao:active { transform: scale(0.94); }
-.contador { position: absolute; top: 4px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--cta-bg); color: var(--cta-fg); font-size: 0.6875rem; font-weight: 700; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--fundo); }
+.contador { position: absolute; top: 4px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--ouro); color: var(--ouro-texto); font-size: 0.6875rem; font-weight: 700; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--fundo); }
 .link { color: var(--texto); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--borda-forte); }
 .link:hover { text-decoration-color: currentColor; }
 
@@ -139,7 +148,7 @@ main { padding-bottom: 24px; }
 }
 .campo textarea { padding: 14px 16px; min-height: 96px; resize: vertical; }
 .campo input::placeholder, .campo textarea::placeholder { color: var(--texto-2); opacity: 0.8; }
-.campo input:focus, .campo select:focus, .campo textarea:focus { outline: none; border-color: var(--texto); box-shadow: 0 0 0 3px var(--borda); }
+.campo input:focus, .campo select:focus, .campo textarea:focus { outline: none; border-color: var(--ouro); box-shadow: 0 0 0 3px var(--ouro-fundo); }
 .campo input[aria-invalid="true"], .campo select[aria-invalid="true"] { border-color: var(--erro); }
 .campo .ajuda { font-size: 0.8125rem; color: var(--texto-2); }
 .campo .erro-campo { font-size: 0.8125rem; color: var(--erro); font-weight: 500; }
@@ -257,6 +266,14 @@ dialog.folha[open]::backdrop { background: rgb(0 0 0 / 0.55); }
 .vazio { display: grid; justify-items: center; gap: 10px; padding: 32px 20px; text-align: center; color: var(--texto-2); border: 1px dashed var(--borda-forte); border-radius: var(--raio); }
 .vazio i { font-size: 2rem; color: var(--texto); }
 .vazio b { color: var(--texto); font-size: 1.0625rem; }
+
+/* ---------------------------------------------------------------- toque dourado
+   ouro.js põe .toque-ouro enquanto o dedo aperta e troca por .toque-ouro--saindo ao soltar.
+   Sem JavaScript, o :active faz o mesmo papel. Contorno (outline) não mexe no layout. */
+.toque-ouro { outline: 2px solid var(--ouro) !important; outline-offset: 2px; }
+.toque-ouro--saindo { outline: 2px solid transparent; outline-offset: 2px; animation: ouro-sai 360ms ease; }
+@keyframes ouro-sai { from { outline-color: var(--ouro); } to { outline-color: transparent; } }
+:where(.botao, .icone-botao, .aba, .ag-servico, .ag-dia, .ag-hora, .cartao, .horario, .item-agenda, .resumo__item):active { outline: 2px solid var(--ouro); outline-offset: 2px; }
 
 /* ---------------------------------------------------------------- revelar */
 .js [data-revelar] { opacity: 0; transform: translateY(14px); transition: opacity 600ms var(--ease-out), transform 600ms var(--ease-out); transition-delay: calc(var(--i, 0) * 60ms); }

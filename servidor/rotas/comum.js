@@ -1,5 +1,5 @@
 // Utilidades compartilhadas pelas rotas.
-import { consulta } from '../db/index.js';
+import { executar, umaLinha } from '../db/index.js';
 import { gerarToken, hashToken } from '../lib/seguranca.js';
 
 /** Envolve handlers async para que erros cheguem ao tratador central. */
@@ -8,7 +8,7 @@ export const rota = (fn) => (req, res, next) => Promise.resolve(fn(req, res, nex
 /** Dados do usuário que podem ir para o navegador. */
 export function usuarioPublico(u) {
   if (!u) return null;
-  const prefs = typeof u.preferencias === 'string' ? JSON.parse(u.preferencias) : u.preferencias;
+  const prefs = u.preferencias;
   return {
     nome: u.nome,
     email: u.email,
@@ -22,9 +22,9 @@ export function usuarioPublico(u) {
 
 /** Cria token de uso único (verificar e-mail, redefinir senha) e invalida os anteriores do mesmo tipo. */
 export async function criarTokenUsoUnico(conn, usuarioId, tipo, horas) {
-  await consulta('UPDATE tokens_uso_unico SET usado_em = UTC_TIMESTAMP() WHERE usuario_id = ? AND tipo = ? AND usado_em IS NULL', [usuarioId, tipo], conn);
+  await executar('UPDATE tokens_uso_unico SET usado_em = now() WHERE usuario_id = $1 AND tipo = $2 AND usado_em IS NULL', [usuarioId, tipo], conn);
   const token = gerarToken();
-  await consulta('INSERT INTO tokens_uso_unico (usuario_id, tipo, token_hash, expira_em) VALUES (?, ?, ?, UTC_TIMESTAMP() + INTERVAL ? HOUR)', [
+  await executar('INSERT INTO tokens_uso_unico (usuario_id, tipo, token_hash, expira_em) VALUES ($1, $2, $3, now() + make_interval(hours => $4))', [
     usuarioId, tipo, hashToken(token), horas,
   ], conn);
   return token;
@@ -32,13 +32,12 @@ export async function criarTokenUsoUnico(conn, usuarioId, tipo, horas) {
 
 /** Consome um token válido (marca como usado) e devolve o usuario_id, ou null. */
 export async function consumirToken(conn, token, tipo) {
-  const linha = (await consulta(
-    `SELECT id, usuario_id FROM tokens_uso_unico
-      WHERE token_hash = ? AND tipo = ? AND usado_em IS NULL AND expira_em > UTC_TIMESTAMP() FOR UPDATE`,
+  // Um UPDATE só marca e devolve: dois cliques no mesmo link nunca usam o token duas vezes
+  const linha = await umaLinha(
+    `UPDATE tokens_uso_unico SET usado_em = now()
+      WHERE token_hash = $1 AND tipo = $2 AND usado_em IS NULL AND expira_em > now() RETURNING usuario_id`,
     [hashToken(token), tipo],
     conn,
-  ))[0];
-  if (!linha) return null;
-  await consulta('UPDATE tokens_uso_unico SET usado_em = UTC_TIMESTAMP() WHERE id = ?', [linha.id], conn);
-  return linha.usuario_id;
+  );
+  return linha?.usuario_id ?? null;
 }

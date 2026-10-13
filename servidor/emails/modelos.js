@@ -131,7 +131,7 @@ export function lembrete({ nome, servico, quando, endereco, tipo, codigo }) {
     html: layout({ titulo: chamada, previa: `${servico}, ${quando}.`, endereco, corpo:
       p(`${esc(primeiroNome(nome))}, passando para lembrar do seu horário.`) +
       detalhes([['Serviço', servico], ['Quando', quando], ['Onde', endereco || 'Cohab 5, São Paulo - SP'], ['Código', codigo]]) +
-      p('Não vai dar? Cancele ou remarque pelo app para liberar a cadeira para outra pessoa.') +
+      p('Não vai dar? Cancele ou remarque pelo site para liberar a cadeira para outra pessoa.') +
       botao('Ver meu horário', `${config.appUrl}/conta`) }),
     texto: `${chamada}!\n${servico}\n${quando}\nOnde: ${endereco}\nCódigo: ${codigo}\n\nNão vai dar? Cancele ou remarque: ${config.appUrl}/conta`,
   };

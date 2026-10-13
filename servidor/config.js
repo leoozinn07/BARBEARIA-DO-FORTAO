@@ -6,8 +6,7 @@ import path from 'node:path';
 export const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const arquivoEnv = process.env.ARQUIVO_ENV || path.join(RAIZ, '.env');
-// Em teste o .env é ignorado: o banco de testes nunca aponta, por engano, para o banco de verdade
-if (process.env.NODE_ENV !== 'test' && existsSync(arquivoEnv)) process.loadEnvFile(arquivoEnv);
+if (existsSync(arquivoEnv)) process.loadEnvFile(arquivoEnv);
 
 const env = process.env;
 const bool = (v, padrao = false) => (v === undefined || v === '' ? padrao : ['1', 'true', 'sim', 'yes'].includes(String(v).toLowerCase()));
@@ -18,21 +17,20 @@ const appUrl = (env.APP_URL || `http://localhost:${num(env.PORTA, 3000)}`).repla
 
 export const config = {
   producao,
-  testes: env.NODE_ENV === 'test',
   porta: num(env.PORTA, 3000),
   appUrl,
   origem: new URL(appUrl).origin,
   confiarProxy: num(env.CONFIAR_PROXY, producao ? 1 : 0),
   autoMigrar: bool(env.AUTO_MIGRAR, true),
-  agendadorAtivo: bool(env.AGENDADOR_ATIVO, env.NODE_ENV !== 'test'),
+  agendadorAtivo: bool(env.AGENDADOR_ATIVO, true),
   limitesDesligados: bool(env.LIMITES_DESLIGADOS, false),
 
-  mysql: {
-    host: env.MYSQL_HOST || '127.0.0.1',
-    port: num(env.MYSQL_PORTA, 3306),
-    user: env.MYSQL_USUARIO || 'fortao',
-    password: env.MYSQL_SENHA || '',
-    database: env.MYSQL_BANCO || 'fortao',
+  banco: {
+    // Supabase: Project Settings > Database > Connection string > Session pooler
+    url: env.DATABASE_URL || '',
+    // Certificado do Supabase (Database > SSL Configuration > Download certificate)
+    ca: env.DATABASE_CA ? path.resolve(RAIZ, env.DATABASE_CA) : '',
+    conexoes: num(env.DATABASE_CONEXOES, 5),
   },
 
   sessao: {
@@ -51,17 +49,6 @@ export const config = {
     remetente: env.EMAIL_REMETENTE || 'Barbearia do Fortão <nao-responda@localhost>',
     admin: env.EMAIL_ADMIN || '',
     pastaLocal: path.join(RAIZ, 'var', 'emails'),
-  },
-
-  push: {
-    publica: env.VAPID_PUBLICA || '',
-    privada: env.VAPID_PRIVADA || '',
-    contato: env.VAPID_CONTATO || 'mailto:contato@localhost',
-  },
-
-  twa: {
-    pacote: env.TWA_PACOTE || '',
-    sha256: (env.TWA_SHA256 || '').split(',').map((s) => s.trim()).filter(Boolean),
   },
 
   versaoTermos: env.VERSAO_TERMOS || '2026-10-10',

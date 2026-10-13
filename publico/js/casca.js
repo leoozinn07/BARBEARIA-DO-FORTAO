@@ -1,6 +1,7 @@
-// "Casca" comum a todas as páginas: cabeçalho, avisos, abas, rodapé, service worker e push.
-import { carregarSessao, get, post, del } from './api.js';
-import { h, icone, relativo, revelar, toast, toastErro } from './ui.js';
+// "Casca" comum a todas as páginas: cabeçalho, avisos, abas e rodapé.
+import { carregarSessao, get, post } from './api.js';
+import { h, icone, relativo, revelar } from './ui.js';
+import './ouro.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 let configPublica = null;
@@ -64,7 +65,6 @@ async function abrirAvisos(painel, botao) {
   } catch (e) {
     lista.replaceChildren(h('div', { class: 'folha__corpo' }, h('p', { class: 'alerta alerta--erro' }, e.message)));
   }
-  $('[data-push-oferta]', painel).hidden = !(await pushPossivel()) || Notification.permission === 'granted' || Notification.permission === 'denied';
 }
 
 function fecharAvisos(painel, botao) {
@@ -90,55 +90,6 @@ function ligarAvisos(usuario, naoLidas) {
   document.addEventListener('click', (e) => {
     if (painel.dataset.aberto === 'true' && !painel.contains(e.target) && !botao.contains(e.target)) fecharAvisos(painel, botao);
   });
-  $('[data-push-ativar]', painel).addEventListener('click', async (e) => {
-    const ok = await ativarPush();
-    if (ok) e.target.closest('[data-push-oferta]').hidden = true;
-  });
-}
-
-// ---------------------------------------------------------------- push
-async function pushPossivel() {
-  const cfg = await obterConfig();
-  return Boolean(cfg?.push && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window);
-}
-
-function chaveParaBytes(base64) {
-  const pad = '='.repeat((4 - (base64.length % 4)) % 4);
-  const bruto = atob((base64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
-  return Uint8Array.from([...bruto].map((c) => c.charCodeAt(0)));
-}
-
-export async function ativarPush() {
-  try {
-    if (!(await pushPossivel())) {
-      toast({ titulo: 'Sem suporte', texto: 'Este navegador não aceita notificações. No app Android elas funcionam.' });
-      return false;
-    }
-    const permissao = await Notification.requestPermission();
-    if (permissao !== 'granted') {
-      toast({ titulo: 'Notificações desligadas', texto: 'Você pode ativar depois nas configurações do navegador.' });
-      return false;
-    }
-    const cfg = await obterConfig();
-    const registro = await navigator.serviceWorker.ready;
-    const inscricao = (await registro.pushManager.getSubscription())
-      || (await registro.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chaveParaBytes(cfg.push) }));
-    await post('/push', inscricao.toJSON());
-    toast({ titulo: 'Notificações ativadas', texto: 'Você vai receber os lembretes no celular.' });
-    return true;
-  } catch (e) {
-    toastErro(e, 'Não deu para ativar');
-    return false;
-  }
-}
-
-export async function desativarPush() {
-  const registro = await navigator.serviceWorker?.ready;
-  const inscricao = await registro?.pushManager?.getSubscription();
-  if (inscricao) {
-    await del('/push', { endpoint: inscricao.endpoint }).catch(() => {});
-    await inscricao.unsubscribe();
-  }
 }
 
 // ---------------------------------------------------------------- rodapé
@@ -160,7 +111,6 @@ export async function iniciarCasca() {
   if (topo && sentinela && 'IntersectionObserver' in window) {
     new IntersectionObserver(([en]) => { topo.dataset.rolado = String(!en.isIntersecting); }).observe(sentinela);
   }
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 
   const sessao = await carregarSessao();
   const usuario = sessao.usuario;

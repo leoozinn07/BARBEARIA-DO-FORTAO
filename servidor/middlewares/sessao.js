@@ -1,6 +1,6 @@
 // Sessões próprias: token aleatório no cookie HttpOnly, só o hash SHA-256 no banco.
 import { config } from '../config.js';
-import { consulta, umaLinha } from '../db/index.js';
+import { executar, umaLinha } from '../db/index.js';
 import { erros } from '../lib/erros.js';
 import { gerarToken, hashToken } from '../lib/seguranca.js';
 
@@ -21,7 +21,7 @@ export async function carregarSessao(req, res, next) {
       `SELECT s.id AS sessao_id, s.ultimo_uso_em, u.id, u.nome, u.email, u.telefone, u.papel,
               u.email_verificado_em, u.marketing, u.preferencias, u.criado_em
          FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id
-        WHERE s.token_hash = ? AND s.expira_em > UTC_TIMESTAMP() AND u.excluido_em IS NULL`,
+        WHERE s.token_hash = $1 AND s.expira_em > now() AND u.excluido_em IS NULL`,
       [hashToken(token)],
     );
     if (!linha) {
@@ -33,7 +33,7 @@ export async function carregarSessao(req, res, next) {
     req.sessao = { id: sessaoId };
     if (Date.now() - new Date(ultimoUso).getTime() > 3600000) {
       const expira = new Date(Date.now() + config.sessao.diasValidade * DIA);
-      await consulta('UPDATE sessoes SET ultimo_uso_em = UTC_TIMESTAMP(), expira_em = ? WHERE id = ?', [expira, sessaoId]);
+      await executar('UPDATE sessoes SET ultimo_uso_em = now(), expira_em = $1 WHERE id = $2', [expira, sessaoId]);
       res.cookie(config.sessao.cookie, token, opcoesCookie(expira));
     }
     next();
@@ -46,20 +46,20 @@ export async function carregarSessao(req, res, next) {
 export async function iniciarSessao(req, res, usuarioId) {
   const token = gerarToken();
   const expira = new Date(Date.now() + config.sessao.diasValidade * DIA);
-  await consulta('INSERT INTO sessoes (usuario_id, token_hash, expira_em, ip, agente) VALUES (?, ?, ?, ?, ?)', [
+  await executar('INSERT INTO sessoes (usuario_id, token_hash, expira_em, ip, agente) VALUES ($1, $2, $3, $4, $5)', [
     usuarioId, hashToken(token), expira, req.ip?.slice(0, 45) ?? null, String(req.get('user-agent') || '').slice(0, 255),
   ]);
   res.cookie(config.sessao.cookie, token, opcoesCookie(expira));
 }
 
 export async function encerrarSessao(req, res) {
-  if (req.sessao) await consulta('DELETE FROM sessoes WHERE id = ?', [req.sessao.id]);
+  if (req.sessao) await executar('DELETE FROM sessoes WHERE id = $1', [req.sessao.id]);
   res.clearCookie(config.sessao.cookie, { path: '/' });
 }
 
 /** Encerra todas as sessões do usuário (troca/redefinição de senha), opcionalmente mantendo a atual. */
 export async function encerrarTodas(usuarioId, manterSessaoId = null, conn) {
-  await consulta('DELETE FROM sessoes WHERE usuario_id = ? AND id <> ?', [usuarioId, manterSessaoId ?? 0], conn);
+  await executar('DELETE FROM sessoes WHERE usuario_id = $1 AND id <> $2', [usuarioId, manterSessaoId ?? 0], conn);
 }
 
 export function exigirLogin(req, _res, next) {

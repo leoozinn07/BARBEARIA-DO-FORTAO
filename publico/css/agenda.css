@@ -14,14 +14,14 @@
 .ag-servico__info { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .ag-servico__info b { font-size: 1.625rem; font-weight: 700; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
 .ag-servico__info small { font-size: 0.8125rem; opacity: 0.7; }
-.ag-servico:has(input:checked) { background: var(--ativo-bg); color: var(--ativo-fg); border-color: transparent; }
+.ag-servico:has(input:checked) { background: var(--ativo-bg); color: var(--ativo-fg); border-color: transparent; box-shadow: inset 0 0 0 1.5px var(--ouro); }
 
 .ag-dia { position: relative; flex: 0 0 auto; width: 68px; padding: 10px 0 8px; border-radius: var(--raio-campo); background: var(--sup); border: 1px solid var(--borda); display: grid; justify-items: center; gap: 1px; cursor: pointer; scroll-snap-align: start; transition: transform 160ms var(--ease-out), background-color 200ms ease, color 200ms ease; }
 .ag-dia:active { transform: scale(0.96); }
 .ag-dia small { font-size: 0.75rem; color: var(--texto-2); }
 .ag-dia b { font-size: 1.25rem; font-weight: 650; font-variant-numeric: tabular-nums; }
 .ag-dia__info { font-size: 0.625rem; color: var(--texto-2); }
-.ag-dia:has(input:checked) { background: var(--ativo-bg); color: var(--ativo-fg); border-color: transparent; }
+.ag-dia:has(input:checked) { background: var(--ativo-bg); color: var(--ativo-fg); border-color: transparent; box-shadow: inset 0 0 0 1.5px var(--ouro); }
 .ag-dia:has(input:checked) small, .ag-dia:has(input:checked) .ag-dia__info { color: inherit; opacity: 0.75; }
 .ag-dia:has(input:disabled) { opacity: 0.4; cursor: not-allowed; }
 
@@ -31,7 +31,7 @@
 .ag-periodo__lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
 .ag-hora { position: relative; display: grid; place-items: center; min-height: 46px; border-radius: 999px; background: var(--sup); border: 1px solid var(--borda); font-weight: 600; font-size: 0.9375rem; font-variant-numeric: tabular-nums; cursor: pointer; transition: transform 160ms var(--ease-out), background-color 200ms ease, color 200ms ease; }
 .ag-hora:active { transform: scale(0.95); }
-.ag-hora:has(input:checked) { background: var(--ativo-bg); color: var(--ativo-fg); border-color: transparent; }
+.ag-hora:has(input:checked) { background: var(--ativo-bg); color: var(--ativo-fg); border-color: transparent; box-shadow: inset 0 0 0 1.5px var(--ouro); }
 .ag-servico:has(input:focus-visible), .ag-dia:has(input:focus-visible), .ag-hora:has(input:focus-visible) { outline: 2px solid var(--foco); outline-offset: 2px; }
 
 .ag-resumo { display: grid; gap: 10px; padding: 14px; border-radius: 22px; background: var(--sup); border: 1px solid var(--borda); }

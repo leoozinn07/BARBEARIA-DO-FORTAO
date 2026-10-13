@@ -1,6 +1,6 @@
 // /agendar: o mesmo componente da página inicial, em tela cheia. Sem login, guarda a escolha e leva para entrar.
 import { post } from './api.js';
-import { ativarPush, iniciarCasca, obterConfig } from './casca.js';
+import { iniciarCasca } from './casca.js';
 import { esquecerEscolha, lerEscolhaGuardada, montarAgendamento } from './agendamento.js';
 import { abrirFolha, h, icone, quando, reais } from './ui.js';
 
@@ -25,9 +25,6 @@ montarAgendamento($('[data-agendamento]'), {
     esquecerEscolha();
     $('[data-agendar-aviso]').hidden = true;
     $('[data-sucesso-texto]').textContent = `${agendamento.servico}, ${quando(agendamento.inicio)}. Valor: ${reais(agendamento.preco_centavos)}, pago na barbearia.`;
-    const botaoPush = $('[data-sucesso-push]');
-    botaoPush.hidden = !('Notification' in window) || Notification.permission !== 'default' || !(await obterConfig())?.push;
-    botaoPush.onclick = async () => { if (await ativarPush()) botaoPush.hidden = true; };
     const folha = $('[data-folha-sucesso]');
     abrirFolha(folha);
     folha.addEventListener('close', () => { location.href = '/conta#horarios'; }, { once: true });

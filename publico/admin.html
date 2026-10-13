@@ -20,12 +20,15 @@
       <button class="botao botao--cheio" type="button" data-novo-abrir><i class="ph-bold ph-plus" aria-hidden="true"></i> Novo horário</button>
     </header>
 
+    <p class="alerta" data-aviso-email hidden><i class="ph ph-envelope-simple-open" aria-hidden="true"></i><span>Os e-mails de confirmação e lembrete ainda não estão saindo: falta configurar o envio (SMTP). O passo a passo está no guia de deploy. Até lá, os avisos aparecem só no site.</span></p>
+
     <section class="resumo" aria-label="Resumo" data-resumo>
       <div class="esqueleto resumo__esq"></div><div class="esqueleto resumo__esq"></div><div class="esqueleto resumo__esq"></div>
     </section>
 
     <nav class="segmentos" aria-label="Seções do painel">
       <a href="#agenda" data-segmento="agenda">Agenda</a>
+      <a href="#rendimento" data-segmento="rendimento">Rendimento</a>
       <a href="#bloqueios" data-segmento="bloqueios">Folgas</a>
       <a href="#servicos" data-segmento="servicos">Serviços</a>
       <a href="#funcionamento" data-segmento="funcionamento">Horários</a>
@@ -43,6 +46,61 @@
       </div>
       <h2 class="titulo" id="agenda-titulo" data-agenda-titulo>Agenda de hoje</h2>
       <ol class="linha-tempo" data-agenda aria-labelledby="agenda-titulo"></ol>
+    </section>
+
+    <!-- RENDIMENTO -->
+    <section class="painel rend" data-painel="rendimento" aria-labelledby="rend-titulo" hidden>
+      <div class="pagina__cabeca">
+        <h2 class="titulo" id="rend-titulo">Rendimento</h2>
+        <p class="subtitulo">O que entrou com os cortes e serviços marcados. Pago na barbearia, o horário conta como recebido quando fica concluído: você toca em Concluído ou ele conclui sozinho 3 horas depois. Falta não entra na conta.</p>
+      </div>
+
+      <div class="rend-filtros" role="group" aria-label="Período">
+        <div class="rend-filtros__atalhos">
+          <button class="filtro" type="button" data-preset="mes" aria-pressed="true">Este mês</button>
+          <button class="filtro" type="button" data-preset="mes-passado" aria-pressed="false">Mês passado</button>
+          <button class="filtro" type="button" data-preset="7" aria-pressed="false">7 dias</button>
+          <button class="filtro" type="button" data-preset="30" aria-pressed="false">30 dias</button>
+          <button class="filtro" type="button" data-preset="ano" aria-pressed="false">Este ano</button>
+        </div>
+        <div class="rend-filtros__datas">
+          <label><span>De</span><input type="date" data-rend-de></label>
+          <label><span>Até</span><input type="date" data-rend-ate></label>
+        </div>
+      </div>
+      <p class="alerta alerta--erro" data-rend-erro role="alert" hidden></p>
+
+      <div class="rend-kpis" data-rend-kpis aria-live="polite">
+        <div class="esqueleto kpi-esq"></div><div class="esqueleto kpi-esq"></div><div class="esqueleto kpi-esq"></div><div class="esqueleto kpi-esq"></div>
+      </div>
+
+      <figure class="cartao rend-grafico">
+        <figcaption class="rend-grafico__cabeca">
+          <b data-rend-titulo-grafico>Por dia</b>
+          <span class="legenda"><span><i class="chave chave--real" aria-hidden="true"></i>Recebido</span><span><i class="chave chave--receber" aria-hidden="true"></i>A receber</span></span>
+        </figcaption>
+        <div class="rend-grafico__area">
+          <div class="rend-grafico__svg" data-rend-grafico tabindex="0" aria-describedby="rend-dica-teclado"></div>
+          <div class="dica" data-rend-dica role="status" hidden></div>
+          <p class="rend-grafico__vazio" data-rend-vazio hidden>Nenhum atendimento neste período.</p>
+        </div>
+        <p class="sr-only" id="rend-dica-teclado">Use as setas para ver cada dia.</p>
+      </figure>
+
+      <section class="cartao rend-servicos" aria-labelledby="rend-serv-titulo">
+        <h3 id="rend-serv-titulo">Por serviço</h3>
+        <ul data-rend-servicos></ul>
+      </section>
+
+      <details class="cartao rend-tabela">
+        <summary><i class="ph ph-table" aria-hidden="true"></i> Ver em tabela</summary>
+        <div class="rend-tabela__rolagem">
+          <table>
+            <thead><tr><th scope="col">Período</th><th scope="col">Recebido</th><th scope="col">A receber</th><th scope="col">Horários</th></tr></thead>
+            <tbody data-rend-tabela></tbody>
+          </table>
+        </div>
+      </details>
     </section>
 
     <!-- FOLGAS / BLOQUEIOS -->

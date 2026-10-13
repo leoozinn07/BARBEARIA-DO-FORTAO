@@ -1,4 +1,4 @@
-// Páginas legais, 404 e offline: casca comum + dados da empresa vindos do painel.
+// Páginas legais e 404: casca comum + dados da empresa vindos do painel.
 import { iniciarCasca, obterConfig } from './casca.js';
 
 await iniciarCasca();
