@@ -4,6 +4,8 @@ Site de agendamento da Barbearia do Fortão, na Cohab 5 (São Paulo). O cliente 
 
 ![Telas do site](docs/previas/visao-geral.jpg)
 
+<sub>Prévias tiradas de um banco local com horários de exemplo. O banco do Supabase começa vazio, só com os serviços e os horários de funcionamento.</sub>
+
 ## O que funciona
 
 - **Cliente:** cria conta, marca em 3 toques (serviço, dia, horário), vê o preço antes de confirmar, recebe confirmação por e-mail com convite de agenda, lembrete 24 h e 2 h antes, remarca e cancela pelo site, vê avisos no sino, escolhe tema escuro ou claro e letra grande.

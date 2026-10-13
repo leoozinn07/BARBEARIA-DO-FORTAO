@@ -240,11 +240,12 @@ export function montarRendimento(raiz) {
       ].filter(Boolean).join(' · ') || 'Sem horários'),
     );
     dica.hidden = false;
-    // Posiciona a dica sobre a coluna, sem sair da caixa do gráfico
+    // A dica fica ao lado da coluna (nunca em cima dela), do lado que tiver espaço
     const centro = ESQ + grafico.faixa * i + grafico.faixa / 2;
     const largura = dica.offsetWidth;
-    const max = grafico.clientWidth - largura;
-    dica.style.transform = `translateX(${Math.max(0, Math.min(max, centro - largura / 2))}px)`;
+    const folga = grafico.faixa / 2 + 8;
+    const x = centro + folga + largura <= grafico.clientWidth ? centro + folga : centro - folga - largura;
+    dica.style.transform = `translateX(${Math.max(0, x)}px)`;
   }
 
   // Teclado: o gráfico recebe foco e as setas andam pelas colunas
