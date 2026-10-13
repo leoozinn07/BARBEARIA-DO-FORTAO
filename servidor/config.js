@@ -25,12 +25,12 @@ export const config = {
   agendadorAtivo: bool(env.AGENDADOR_ATIVO, true),
   limitesDesligados: bool(env.LIMITES_DESLIGADOS, false),
 
-  banco: {
-    // Supabase: Project Settings > Database > Connection string > Session pooler
-    url: env.DATABASE_URL || '',
-    // Certificado do Supabase (Database > SSL Configuration > Download certificate)
-    ca: env.DATABASE_CA ? path.resolve(RAIZ, env.DATABASE_CA) : '',
-    conexoes: num(env.DATABASE_CONEXOES, 5),
+  mysql: {
+    host: env.MYSQL_HOST || '127.0.0.1',
+    port: num(env.MYSQL_PORTA, 3306),
+    user: env.MYSQL_USUARIO || 'fortao',
+    password: env.MYSQL_SENHA || '',
+    database: env.MYSQL_BANCO || 'fortao',
   },
 
   sessao: {

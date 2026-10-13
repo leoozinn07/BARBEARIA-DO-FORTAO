@@ -1,4 +1,4 @@
-# Imagem de produção do site (Node 22, sem dependências de desenvolvimento). O banco fica no Supabase.
+# Imagem de produção do site (Node 22, sem dependências de desenvolvimento).
 FROM node:22-alpine
 ENV NODE_ENV=production
 WORKDIR /app

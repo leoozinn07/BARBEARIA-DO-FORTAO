@@ -1,6 +1,6 @@
 // Dados iniciais. Pode rodar várias vezes: só cria o que ainda não existe.
 import { fileURLToPath } from 'node:url';
-import { executar, umaLinha, fecharPool } from './index.js';
+import { consulta, umaLinha, fecharPool } from './index.js';
 import { log } from '../lib/log.js';
 
 export const SERVICOS_INICIAIS = [
@@ -40,20 +40,22 @@ export const CONFIG_INICIAL = {
 export async function semear() {
   let barbeiro = await umaLinha('SELECT id FROM barbeiros ORDER BY id LIMIT 1');
   if (!barbeiro) {
-    barbeiro = await umaLinha('INSERT INTO barbeiros (nome) VALUES ($1) RETURNING id', ['Fortão']);
+    const r = await consulta('INSERT INTO barbeiros (nome) VALUES (?)', ['Fortão']);
+    barbeiro = { id: r.insertId };
     for (const [dia, abre, fecha] of HORARIOS_INICIAIS) {
-      await executar('INSERT INTO horarios_funcionamento (barbeiro_id, dia_semana, abre, fecha) VALUES ($1, $2, $3, $4)', [barbeiro.id, dia, abre, fecha]);
+      await consulta('INSERT INTO horarios_funcionamento (barbeiro_id, dia_semana, abre, fecha) VALUES (?, ?, ?, ?)', [barbeiro.id, dia, abre, fecha]);
     }
     // Catálogo inicial só no primeiro uso: depois disso quem manda nos serviços é o painel
+    // (um serviço removido pelo Fortão não volta sozinho quando o site reinicia)
     for (const s of SERVICOS_INICIAIS) {
-      await executar(
-        'INSERT INTO servicos (slug, nome, descricao, preco_centavos, duracao_min, ordem) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (slug) DO NOTHING',
+      await consulta(
+        'INSERT IGNORE INTO servicos (slug, nome, descricao, preco_centavos, duracao_min, ordem) VALUES (?, ?, ?, ?, ?, ?)',
         [s.slug, s.nome, s.descricao, s.preco_centavos, s.duracao_min, s.ordem],
       );
     }
   }
   for (const [chave, valor] of Object.entries(CONFIG_INICIAL)) {
-    await executar('INSERT INTO configuracoes (chave, valor) VALUES ($1, $2) ON CONFLICT (chave) DO NOTHING', [chave, JSON.stringify(valor)]);
+    await consulta('INSERT IGNORE INTO configuracoes (chave, valor) VALUES (?, ?)', [chave, JSON.stringify(valor)]);
   }
   return barbeiro.id;
 }

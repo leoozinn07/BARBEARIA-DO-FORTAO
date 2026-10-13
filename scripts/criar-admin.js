@@ -3,7 +3,7 @@
 // Sem --senha, uma senha forte é gerada e mostrada uma única vez.
 import { parseArgs } from 'node:util';
 import { randomBytes } from 'node:crypto';
-import { executar, umaLinha, fecharPool } from '../servidor/db/index.js';
+import { consulta, umaLinha, fecharPool } from '../servidor/db/index.js';
 import { migrar } from '../servidor/db/migrar.js';
 import { semear } from '../servidor/db/semear.js';
 import { hashSenha, motivoSenhaFraca } from '../servidor/lib/seguranca.js';
@@ -24,14 +24,16 @@ if (fraca) {
 await migrar();
 const barbeiroId = await semear();
 const hash = await hashSenha(senha);
-const { id } = await umaLinha(
-  `INSERT INTO usuarios (nome, email, senha_hash, papel, email_verificado_em) VALUES ($1, $2, $3, 'admin', now())
-   ON CONFLICT (email) DO UPDATE SET papel = 'admin', senha_hash = EXCLUDED.senha_hash, nome = EXCLUDED.nome,
-     email_verificado_em = COALESCE(usuarios.email_verificado_em, now()), excluido_em = NULL, tentativas_falhas = 0, bloqueado_ate = NULL
-   RETURNING id`,
-  [values.nome, email, hash],
-);
-await executar('UPDATE barbeiros SET usuario_id = $1 WHERE id = $2', [id, barbeiroId]);
+const existente = await umaLinha('SELECT id FROM usuarios WHERE email = ?', [email]);
+let id;
+if (existente) {
+  await consulta("UPDATE usuarios SET papel = 'admin', senha_hash = ?, nome = ?, email_verificado_em = COALESCE(email_verificado_em, UTC_TIMESTAMP()), excluido_em = NULL WHERE id = ?", [hash, values.nome, existente.id]);
+  id = existente.id;
+} else {
+  const r = await consulta("INSERT INTO usuarios (nome, email, senha_hash, papel, email_verificado_em) VALUES (?, ?, ?, 'admin', UTC_TIMESTAMP())", [values.nome, email, hash]);
+  id = r.insertId;
+}
+await consulta('UPDATE barbeiros SET usuario_id = ? WHERE id = ?', [id, barbeiroId]);
 console.log(`\nAdmin pronto: ${email}`);
 if (!values.senha) console.log(`Senha gerada (anote agora, ela não aparece de novo): ${senha}`);
 console.log('Entre em /entrar e o painel fica em /admin.\n');

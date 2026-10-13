@@ -4,7 +4,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import nodemailer from 'nodemailer';
 import { config } from '../config.js';
-import { consulta, executar, umaLinha } from '../db/index.js';
+import { consulta, umaLinha } from '../db/index.js';
 import { log } from '../lib/log.js';
 
 const MAX_TENTATIVAS = 6;
@@ -44,8 +44,8 @@ export const smtpConfigurado = () => Boolean(config.email.host);
 /** Grava o e-mail na fila. Use o `conn` da transação do evento. */
 export async function enfileirarEmail(conn, { para, assunto, html, texto, anexos = null }) {
   if (!para) return;
-  await executar(
-    'INSERT INTO emails_saida (para, assunto, html, texto, anexos) VALUES ($1, $2, $3, $4, $5)',
+  await consulta(
+    'INSERT INTO emails_saida (para, assunto, html, texto, anexos) VALUES (?, ?, ?, ?, ?)',
     [para, assunto, html, texto, anexos ? JSON.stringify(anexos) : null],
     conn,
   );
@@ -55,20 +55,21 @@ export async function enfileirarEmail(conn, { para, assunto, html, texto, anexos
 export async function processarFila({ limite = 20 } = {}) {
   const pendentes = await consulta(
     `SELECT id FROM emails_saida
-      WHERE enviado_em IS NULL AND tentativas < $1 AND proxima_tentativa_em <= now()
-      ORDER BY id LIMIT $2`,
+      WHERE enviado_em IS NULL AND tentativas < ? AND proxima_tentativa_em <= UTC_TIMESTAMP()
+      ORDER BY id LIMIT ?`,
     [MAX_TENTATIVAS, limite],
   );
   let enviados = 0;
   for (const { id } of pendentes) {
-    const email = await umaLinha(
-      `UPDATE emails_saida SET tentativas = tentativas + 1, proxima_tentativa_em = now() + interval '5 minutes'
-        WHERE id = $1 AND enviado_em IS NULL AND proxima_tentativa_em <= now() RETURNING *`,
+    const reserva = await consulta(
+      `UPDATE emails_saida SET tentativas = tentativas + 1, proxima_tentativa_em = UTC_TIMESTAMP() + INTERVAL 5 MINUTE
+        WHERE id = ? AND enviado_em IS NULL AND proxima_tentativa_em <= UTC_TIMESTAMP()`,
       [id],
     );
-    if (!email) continue;
+    if (reserva.affectedRows !== 1) continue;
+    const email = await umaLinha('SELECT * FROM emails_saida WHERE id = ?', [id]);
     try {
-      const anexos = email.anexos;
+      const anexos = typeof email.anexos === 'string' ? JSON.parse(email.anexos) : email.anexos;
       await obterTransporte().sendMail({
         from: config.email.remetente,
         to: email.para,
@@ -77,12 +78,12 @@ export async function processarFila({ limite = 20 } = {}) {
         text: email.texto,
         attachments: anexos || undefined,
       });
-      await executar('UPDATE emails_saida SET enviado_em = now(), erro = NULL WHERE id = $1', [id]);
+      await consulta('UPDATE emails_saida SET enviado_em = UTC_TIMESTAMP(), erro = NULL WHERE id = ?', [id]);
       enviados++;
     } catch (e) {
       // Espera cresce a cada falha: 2, 4, 8, 16... minutos
       const espera = 2 ** email.tentativas;
-      await executar('UPDATE emails_saida SET erro = $1, proxima_tentativa_em = now() + make_interval(mins => $2) WHERE id = $3', [
+      await consulta('UPDATE emails_saida SET erro = ?, proxima_tentativa_em = UTC_TIMESTAMP() + INTERVAL ? MINUTE WHERE id = ?', [
         String(e.message).slice(0, 500), espera, id,
       ]);
       log.erro('email_falhou', { id, tentativa: email.tentativas, erro: e.message });

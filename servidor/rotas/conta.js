@@ -1,7 +1,7 @@
 // Área do cliente: perfil, senha, LGPD (exportar/excluir), agendamentos e avisos.
 import { Router } from 'express';
 import { config } from '../config.js';
-import { consulta, executar, umaLinha, transacao } from '../db/index.js';
+import { consulta, umaLinha, transacao } from '../db/index.js';
 import * as modelos from '../emails/modelos.js';
 import { acordarEntregador, enfileirarEmail } from '../emails/fila.js';
 import { erros } from '../lib/erros.js';
@@ -34,35 +34,35 @@ const esquemaPerfil = z.object({
 rotasConta.patch('/conta', validar(esquemaPerfil), rota(async (req, res) => {
   const d = req.dados;
   const u = req.usuario;
-  const prefsAtuais = u.preferencias || {};
+  const prefsAtuais = (typeof u.preferencias === 'string' ? JSON.parse(u.preferencias) : u.preferencias) || {};
   const prefs = { ...prefsAtuais, ...(d.preferencias || {}) };
   await transacao(async (conn) => {
-    await executar('UPDATE usuarios SET nome = $1, telefone = $2, marketing = $3, preferencias = $4 WHERE id = $5', [
+    await consulta('UPDATE usuarios SET nome = ?, telefone = ?, marketing = ?, preferencias = ? WHERE id = ?', [
       d.nome ?? u.nome,
       d.telefone === undefined ? u.telefone : d.telefone,
-      d.marketing === undefined ? u.marketing : d.marketing,
+      d.marketing === undefined ? u.marketing : (d.marketing ? 1 : 0),
       JSON.stringify(prefs),
       u.id,
     ], conn);
-    if (d.marketing !== undefined && d.marketing !== u.marketing) {
-      await executar('INSERT INTO consentimentos (usuario_id, tipo, versao, aceito, ip) VALUES ($1, $2, $3, $4, $5)', [
-        u.id, 'marketing', config.versaoPrivacidade, d.marketing, req.ip?.slice(0, 45) ?? null,
+    if (d.marketing !== undefined && Boolean(d.marketing) !== Boolean(u.marketing)) {
+      await consulta('INSERT INTO consentimentos (usuario_id, tipo, versao, aceito, ip) VALUES (?, ?, ?, ?, ?)', [
+        u.id, 'marketing', config.versaoPrivacidade, d.marketing ? 1 : 0, req.ip?.slice(0, 45) ?? null,
       ], conn);
     }
   });
-  const atualizado = await umaLinha('SELECT * FROM usuarios WHERE id = $1', [u.id]);
+  const atualizado = await umaLinha('SELECT * FROM usuarios WHERE id = ?', [u.id]);
   res.json({ usuario: usuarioPublico(atualizado) });
 }));
 
 rotasConta.post('/conta/senha', limites.senha, validar(z.object({ senha_atual: campos.senha, senha_nova: campos.senha })), rota(async (req, res) => {
   const { senha_atual: atual, senha_nova: nova } = req.dados;
-  const { senha_hash: hashAtual } = await umaLinha('SELECT senha_hash FROM usuarios WHERE id = $1', [req.usuario.id]);
+  const { senha_hash: hashAtual } = await umaLinha('SELECT senha_hash FROM usuarios WHERE id = ?', [req.usuario.id]);
   if (!(await conferirSenha(hashAtual, atual))) throw erros.validacao({ senha_atual: 'Senha atual incorreta.' });
   const fraca = motivoSenhaFraca(nova, req.usuario);
   if (fraca) throw erros.validacao({ senha_nova: fraca });
   const novoHash = await hashSenha(nova);
   await transacao(async (conn) => {
-    await executar('UPDATE usuarios SET senha_hash = $1 WHERE id = $2', [novoHash, req.usuario.id], conn);
+    await consulta('UPDATE usuarios SET senha_hash = ? WHERE id = ?', [novoHash, req.usuario.id], conn);
     await encerrarTodas(req.usuario.id, req.sessao.id, conn);
     await enfileirarEmail(conn, { para: req.usuario.email, ...modelos.senhaAlterada({ nome: req.usuario.nome }) });
   });
@@ -75,11 +75,11 @@ rotasConta.post('/conta/senha', limites.senha, validar(z.object({ senha_atual: c
 rotasConta.get('/conta/dados', rota(async (req, res) => {
   const id = req.usuario.id;
   const [perfil, consentimentos, agendamentos, notificacoes, sessoes] = await Promise.all([
-    umaLinha('SELECT nome, email, telefone, papel, email_verificado_em, marketing, preferencias, criado_em, atualizado_em FROM usuarios WHERE id = $1', [id]),
-    consulta('SELECT tipo, versao, aceito, criado_em FROM consentimentos WHERE usuario_id = $1 ORDER BY id', [id]),
-    consulta('SELECT codigo, servico_nome, preco_centavos, duracao_min, inicio, fim, status, cancelado_por, motivo_cancelamento, criado_em FROM agendamentos WHERE cliente_id = $1 ORDER BY inicio', [id]),
-    consulta('SELECT tipo, titulo, corpo, lida_em, criado_em FROM notificacoes WHERE usuario_id = $1 ORDER BY id', [id]),
-    consulta('SELECT criado_em, ultimo_uso_em, expira_em, ip, agente FROM sessoes WHERE usuario_id = $1 ORDER BY id', [id]),
+    umaLinha('SELECT nome, email, telefone, papel, email_verificado_em, marketing, preferencias, criado_em, atualizado_em FROM usuarios WHERE id = ?', [id]),
+    consulta('SELECT tipo, versao, aceito, criado_em FROM consentimentos WHERE usuario_id = ? ORDER BY id', [id]),
+    consulta('SELECT codigo, servico_nome, preco_centavos, duracao_min, inicio, fim, status, cancelado_por, motivo_cancelamento, criado_em FROM agendamentos WHERE cliente_id = ? ORDER BY inicio', [id]),
+    consulta('SELECT tipo, titulo, corpo, lida_em, criado_em FROM notificacoes WHERE usuario_id = ? ORDER BY id', [id]),
+    consulta('SELECT criado_em, ultimo_uso_em, expira_em, ip, agente FROM sessoes WHERE usuario_id = ? ORDER BY id', [id]),
   ]);
   await auditar({ usuarioId: id, acao: 'exportou_dados', ip: req.ip });
   res
@@ -98,17 +98,17 @@ rotasConta.get('/conta/dados', rota(async (req, res) => {
 
 rotasConta.post('/conta/excluir', limites.senha, validar(z.object({ senha: campos.senha })), rota(async (req, res) => {
   const u = req.usuario;
-  const { senha_hash: hashAtual } = await umaLinha('SELECT senha_hash FROM usuarios WHERE id = $1', [u.id]);
+  const { senha_hash: hashAtual } = await umaLinha('SELECT senha_hash FROM usuarios WHERE id = ?', [u.id]);
   if (!(await conferirSenha(hashAtual, req.dados.senha))) throw erros.validacao({ senha: 'Senha incorreta.' });
   if (u.papel === 'admin') throw erros.conflito('A conta do admin não pode ser excluída pelo site.', 'admin');
   await transacao(async (conn) => {
     const futuros = await consulta(
-      "SELECT codigo, servico_nome, inicio FROM agendamentos WHERE cliente_id = $1 AND status = 'confirmado' AND inicio > now()",
+      "SELECT codigo, servico_nome, inicio FROM agendamentos WHERE cliente_id = ? AND status = 'confirmado' AND inicio > UTC_TIMESTAMP()",
       [u.id], conn,
     );
     if (futuros.length) {
-      await executar(
-        "UPDATE agendamentos SET status = 'cancelado', cancelado_por = 'cliente', motivo_cancelamento = 'Conta excluída' WHERE cliente_id = $1 AND status = 'confirmado' AND inicio > now()",
+      await consulta(
+        "UPDATE agendamentos SET status = 'cancelado', cancelado_por = 'cliente', motivo_cancelamento = 'Conta excluída' WHERE cliente_id = ? AND status = 'confirmado' AND inicio > UTC_TIMESTAMP()",
         [u.id], conn,
       );
       const admins = await consulta("SELECT id FROM usuarios WHERE papel = 'admin' AND excluido_em IS NULL", [], conn);
@@ -118,17 +118,18 @@ rotasConta.post('/conta/excluir', limites.senha, validar(z.object({ senha: campo
     }
     await enfileirarEmail(conn, { para: u.email, ...modelos.contaExcluida({ nome: u.nome }) });
     // Anonimiza: o histórico de atendimentos fica, sem nada que identifique a pessoa
-    await executar(
-      `UPDATE usuarios SET nome = 'Cliente removido', email = 'removido-' || id || '@excluido.invalid', telefone = NULL,
-         senha_hash = '!', marketing = false, preferencias = NULL, email_verificado_em = NULL, excluido_em = now() WHERE id = $1`,
+    await consulta(
+      `UPDATE usuarios SET nome = 'Cliente removido', email = CONCAT('removido-', id, '@excluido.invalid'), telefone = NULL,
+         senha_hash = '!', marketing = 0, preferencias = NULL, email_verificado_em = NULL, excluido_em = UTC_TIMESTAMP() WHERE id = ?`,
       [u.id], conn,
     );
-    await executar("UPDATE agendamentos SET cliente_nome = 'Cliente removido', cliente_telefone = NULL WHERE cliente_id = $1", [u.id], conn);
-    await executar('UPDATE consentimentos SET ip = NULL WHERE usuario_id = $1', [u.id], conn);
-    await executar('UPDATE auditoria SET ip = NULL WHERE usuario_id = $1', [u.id], conn);
-    for (const tabela of ['notificacoes', 'tokens_uso_unico', 'sessoes']) {
-      await executar(`DELETE FROM ${tabela} WHERE usuario_id = $1`, [u.id], conn);
+    await consulta("UPDATE agendamentos SET cliente_nome = 'Cliente removido', cliente_telefone = NULL WHERE cliente_id = ?", [u.id], conn);
+    await consulta('UPDATE consentimentos SET ip = NULL WHERE usuario_id = ?', [u.id], conn);
+    await consulta('UPDATE auditoria SET ip = NULL WHERE usuario_id = ?', [u.id], conn);
+    for (const tabela of ['notificacoes', 'tokens_uso_unico']) {
+      await consulta(`DELETE FROM ${tabela} WHERE usuario_id = ?`, [u.id], conn);
     }
+    await consulta('DELETE FROM sessoes WHERE usuario_id = ?', [u.id], conn);
   });
   acordarEntregador();
   await auditar({ usuarioId: u.id, acao: 'excluiu_conta' });
@@ -140,7 +141,7 @@ rotasConta.post('/conta/excluir', limites.senha, validar(z.object({ senha: campo
 rotasConta.get('/conta/agendamentos', rota(async (req, res) => {
   const { agenda } = await lerConfiguracoes();
   const linhas = await consulta(
-    'SELECT a.*, s.slug AS servico_slug FROM agendamentos a JOIN servicos s ON s.id = a.servico_id WHERE a.cliente_id = $1 ORDER BY a.inicio DESC LIMIT 100',
+    'SELECT a.*, s.slug AS servico_slug FROM agendamentos a JOIN servicos s ON s.id = a.servico_id WHERE a.cliente_id = ? ORDER BY a.inicio DESC LIMIT 100',
     [req.usuario.id],
   );
   const agora = Date.now();
@@ -177,7 +178,7 @@ rotasConta.post('/agendamentos/:codigo/remarcar', limites.agendar, validar(z.obj
 
 // ------------------------------------------------------------------ avisos (central de notificações)
 rotasConta.get('/notificacoes', rota(async (req, res) => {
-  const lista = await consulta('SELECT id, tipo, titulo, corpo, link, lida_em, criado_em FROM notificacoes WHERE usuario_id = $1 ORDER BY id DESC LIMIT 50', [req.usuario.id]);
+  const lista = await consulta('SELECT id, tipo, titulo, corpo, link, lida_em, criado_em FROM notificacoes WHERE usuario_id = ? ORDER BY id DESC LIMIT 50', [req.usuario.id]);
   res.set('Cache-Control', 'no-store').json({
     nao_lidas: lista.filter((n) => !n.lida_em).length,
     notificacoes: lista.map((n) => ({ ...n, lida: Boolean(n.lida_em), lida_em: undefined })),
@@ -187,9 +188,9 @@ rotasConta.get('/notificacoes', rota(async (req, res) => {
 rotasConta.post('/notificacoes/lidas', validar(z.object({ ids: z.array(z.number().int().positive()).max(100).optional() })), rota(async (req, res) => {
   const { ids } = req.dados;
   if (ids?.length) {
-    await executar('UPDATE notificacoes SET lida_em = now() WHERE usuario_id = $1 AND id = ANY($2::bigint[]) AND lida_em IS NULL', [req.usuario.id, ids]);
+    await consulta('UPDATE notificacoes SET lida_em = UTC_TIMESTAMP() WHERE usuario_id = ? AND id IN (?) AND lida_em IS NULL', [req.usuario.id, ids]);
   } else {
-    await executar('UPDATE notificacoes SET lida_em = now() WHERE usuario_id = $1 AND lida_em IS NULL', [req.usuario.id]);
+    await consulta('UPDATE notificacoes SET lida_em = UTC_TIMESTAMP() WHERE usuario_id = ? AND lida_em IS NULL', [req.usuario.id]);
   }
   res.json({ ok: true });
 }));

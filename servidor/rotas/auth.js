@@ -1,7 +1,7 @@
 // Contas: cadastro, entrar, sair, verificar e-mail, esqueci e redefinir senha.
 import { Router } from 'express';
 import { config } from '../config.js';
-import { PG, executar, umaLinha, transacao } from '../db/index.js';
+import { consulta, umaLinha, transacao } from '../db/index.js';
 import * as modelos from '../emails/modelos.js';
 import { acordarEntregador, enfileirarEmail } from '../emails/fila.js';
 import { ErroApp, erros } from '../lib/erros.js';
@@ -40,19 +40,20 @@ rotasAuth.post('/cadastro', limites.cadastro, validar(esquemaCadastro), rota(asy
   const d = req.dados;
   const fraca = motivoSenhaFraca(d.senha, d);
   if (fraca) throw erros.validacao({ senha: fraca });
-  if (await umaLinha('SELECT id FROM usuarios WHERE email = $1', [d.email])) {
+  if (await umaLinha('SELECT id FROM usuarios WHERE email = ?', [d.email])) {
     throw erros.conflito('Esse e-mail já tem conta. Entre ou recupere a senha.', 'email_em_uso');
   }
   const senhaHash = await hashSenha(d.senha);
   let usuarioId;
   try {
     usuarioId = await transacao(async (conn) => {
-      const { id } = await umaLinha('INSERT INTO usuarios (nome, email, telefone, senha_hash, marketing) VALUES ($1, $2, $3, $4, $5) RETURNING id', [
-        d.nome, d.email, d.telefone ?? null, senhaHash, d.marketing,
+      const r = await consulta('INSERT INTO usuarios (nome, email, telefone, senha_hash, marketing) VALUES (?, ?, ?, ?, ?)', [
+        d.nome, d.email, d.telefone ?? null, senhaHash, d.marketing ? 1 : 0,
       ], conn);
+      const id = r.insertId;
       const ip = req.ip?.slice(0, 45) ?? null;
-      for (const [tipo, versao, aceito] of [['termos', config.versaoTermos, true], ['privacidade', config.versaoPrivacidade, true], ['marketing', config.versaoPrivacidade, d.marketing]]) {
-        await executar('INSERT INTO consentimentos (usuario_id, tipo, versao, aceito, ip) VALUES ($1, $2, $3, $4, $5)', [id, tipo, versao, aceito, ip], conn);
+      for (const [tipo, versao, aceito] of [['termos', config.versaoTermos, 1], ['privacidade', config.versaoPrivacidade, 1], ['marketing', config.versaoPrivacidade, d.marketing ? 1 : 0]]) {
+        await consulta('INSERT INTO consentimentos (usuario_id, tipo, versao, aceito, ip) VALUES (?, ?, ?, ?, ?)', [id, tipo, versao, aceito, ip], conn);
       }
       const token = await criarTokenUsoUnico(conn, id, 'verificar_email', 48);
       await enfileirarEmail(conn, { para: d.email, ...modelos.verificarEmail({ nome: d.nome, link: `${config.appUrl}/verificar-email?token=${token}` }) });
@@ -60,21 +61,21 @@ rotasAuth.post('/cadastro', limites.cadastro, validar(esquemaCadastro), rota(asy
       return id;
     });
   } catch (e) {
-    if (e.code === PG.unico) throw erros.conflito('Esse e-mail já tem conta. Entre ou recupere a senha.', 'email_em_uso');
+    if (e.code === 'ER_DUP_ENTRY') throw erros.conflito('Esse e-mail já tem conta. Entre ou recupere a senha.', 'email_em_uso');
     throw e;
   }
   acordarEntregador();
   await iniciarSessao(req, res, usuarioId);
   const csrf = renovarCsrf(req, res);
   await auditar({ usuarioId, acao: 'cadastro', ip: req.ip });
-  const usuario = await umaLinha(`SELECT ${COLUNAS_USUARIO} FROM usuarios WHERE id = $1`, [usuarioId]);
+  const usuario = await umaLinha(`SELECT ${COLUNAS_USUARIO} FROM usuarios WHERE id = ?`, [usuarioId]);
   res.status(201).json({ usuario: usuarioPublico(usuario), csrf });
 }));
 
 // ------------------------------------------------------------------ entrar
 rotasAuth.post('/entrar', limites.entrar, validar(z.object({ email: campos.email, senha: campos.senha })), rota(async (req, res) => {
   const { email, senha } = req.dados;
-  const u = await umaLinha(`SELECT ${COLUNAS_USUARIO} FROM usuarios WHERE email = $1 AND excluido_em IS NULL`, [email]);
+  const u = await umaLinha(`SELECT ${COLUNAS_USUARIO} FROM usuarios WHERE email = ? AND excluido_em IS NULL`, [email]);
   const falha = () => new ErroApp(401, 'E-mail ou senha incorretos.', { codigo: 'credenciais' });
   if (!u) {
     await conferirSenhaFicticia(senha);
@@ -85,16 +86,14 @@ rotasAuth.post('/entrar', limites.entrar, validar(z.object({ email: campos.email
     throw erros.muitas(`Muitas tentativas erradas. Tente de novo em ${min} min ou redefina a senha.`);
   }
   if (!(await conferirSenha(u.senha_hash, senha))) {
-    // No SET do Postgres, tentativas_falhas à direita ainda é o valor antigo
-    await executar(
-      `UPDATE usuarios SET tentativas_falhas = tentativas_falhas + 1,
-         bloqueado_ate = CASE WHEN tentativas_falhas + 1 >= $1 THEN now() + interval '15 minutes' END WHERE id = $2`,
+    await consulta(
+      'UPDATE usuarios SET tentativas_falhas = tentativas_falhas + 1, bloqueado_ate = IF(tentativas_falhas >= ?, UTC_TIMESTAMP() + INTERVAL 15 MINUTE, NULL) WHERE id = ?',
       [MAX_FALHAS, u.id],
     );
     await auditar({ usuarioId: u.id, acao: 'login_falhou', ip: req.ip });
     throw falha();
   }
-  await executar('UPDATE usuarios SET tentativas_falhas = 0, bloqueado_ate = NULL WHERE id = $1', [u.id]);
+  await consulta('UPDATE usuarios SET tentativas_falhas = 0, bloqueado_ate = NULL WHERE id = ?', [u.id]);
   if (req.sessao) await encerrarSessao(req, res);
   await iniciarSessao(req, res, u.id);
   const csrf = renovarCsrf(req, res);
@@ -114,7 +113,7 @@ rotasAuth.post('/verificar-email', validar(z.object({ token: campos.token })), r
   const ok = await transacao(async (conn) => {
     const usuarioId = await consumirToken(conn, req.dados.token, 'verificar_email');
     if (!usuarioId) return false;
-    await executar('UPDATE usuarios SET email_verificado_em = COALESCE(email_verificado_em, now()) WHERE id = $1', [usuarioId], conn);
+    await consulta('UPDATE usuarios SET email_verificado_em = COALESCE(email_verificado_em, UTC_TIMESTAMP()) WHERE id = ?', [usuarioId], conn);
     return true;
   });
   if (!ok) throw erros.requisicao('Esse link expirou ou já foi usado. Entre na conta e peça outro.', { codigo: 'token_invalido' });
@@ -138,7 +137,7 @@ rotasAuth.post('/esqueci-senha', limites.senha, validar(z.object({ email: campos
   // Responde igual exista ou não a conta, e só depois faz o trabalho: o tempo de resposta também não denuncia nada
   res.json({ ok: true, mensagem: MENSAGEM_ESQUECI });
   try {
-    const u = await umaLinha('SELECT id, nome, email FROM usuarios WHERE email = $1 AND excluido_em IS NULL', [req.dados.email]);
+    const u = await umaLinha('SELECT id, nome, email FROM usuarios WHERE email = ? AND excluido_em IS NULL', [req.dados.email]);
     if (!u) return;
     await transacao(async (conn) => {
       const token = await criarTokenUsoUnico(conn, u.id, 'redefinir_senha', 1);
@@ -157,13 +156,13 @@ rotasAuth.post('/redefinir-senha', limites.senha, validar(z.object({ token: camp
   const usuario = await transacao(async (conn) => {
     const usuarioId = await consumirToken(conn, token, 'redefinir_senha');
     if (!usuarioId) throw erros.requisicao('Esse link expirou ou já foi usado. Peça um novo.', { codigo: 'token_invalido' });
-    const u = await umaLinha('SELECT id, nome, email FROM usuarios WHERE id = $1 AND excluido_em IS NULL', [usuarioId], conn);
+    const u = await umaLinha('SELECT id, nome, email FROM usuarios WHERE id = ? AND excluido_em IS NULL', [usuarioId], conn);
     if (!u) throw erros.requisicao('Conta não encontrada.', { codigo: 'token_invalido' });
     const fraca = motivoSenhaFraca(senha, u);
     if (fraca) throw erros.validacao({ senha: fraca });
     // Quem abriu o link do e-mail provou que é dono do endereço
-    await executar(
-      'UPDATE usuarios SET senha_hash = $1, tentativas_falhas = 0, bloqueado_ate = NULL, email_verificado_em = COALESCE(email_verificado_em, now()) WHERE id = $2',
+    await consulta(
+      'UPDATE usuarios SET senha_hash = ?, tentativas_falhas = 0, bloqueado_ate = NULL, email_verificado_em = COALESCE(email_verificado_em, UTC_TIMESTAMP()) WHERE id = ?',
       [novoHash, u.id], conn,
     );
     await encerrarTodas(u.id, null, conn);
@@ -174,7 +173,7 @@ rotasAuth.post('/redefinir-senha', limites.senha, validar(z.object({ token: camp
   await iniciarSessao(req, res, usuario.id);
   const csrf = renovarCsrf(req, res);
   await auditar({ usuarioId: usuario.id, acao: 'redefiniu_senha', ip: req.ip });
-  const u = await umaLinha(`SELECT ${COLUNAS_USUARIO} FROM usuarios WHERE id = $1`, [usuario.id]);
+  const u = await umaLinha(`SELECT ${COLUNAS_USUARIO} FROM usuarios WHERE id = ?`, [usuario.id]);
   res.json({ usuario: usuarioPublico(u), csrf });
 }));
 

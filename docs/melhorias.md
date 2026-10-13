@@ -31,7 +31,7 @@ Tudo aqui é opcional. Escolha o que entra e em que ordem.
 | Meta do mês | O Fortão define uma meta no painel e o rendimento mostra quanto falta. | Baixo |
 | Rendimento por horário | Mostra os horários e dias da semana que mais rendem, para abrir mais cedo ou fechar mais tarde. | Baixo |
 | Exportar o rendimento | Baixar a tabela do período em planilha (CSV) para o contador. | Baixo |
-| Galeria de cortes | O Fortão sobe fotos dos cortes da semana pelo painel (guardadas no Supabase Storage). | Médio |
+| Galeria de cortes | O Fortão sobe fotos dos cortes da semana pelo painel. | Médio |
 | Avaliação depois do corte | E-mail pedindo nota e link para o Google Maps, que ajuda a aparecer nas buscas da região. | Baixo |
 | Lembrete por WhatsApp | Além do e-mail. Exige a API oficial do WhatsApp (cobrada por mensagem). | Médio |
 | Vários barbeiros | O banco já aceita; falta a escolha do barbeiro na tela de marcar e o rendimento por barbeiro. | Médio |
@@ -49,8 +49,7 @@ Isso precisa de dados reais acumulados. O banco já guarda o histórico no forma
 
 ## Antes do lançamento (pendências)
 
-1. Senha do banco e certificado do Supabase no servidor (README, seção Banco de dados).
-2. Endereço exato, WhatsApp, Instagram, razão social e CNPJ no painel.
-3. Domínio e e-mail com SPF/DKIM configurados.
-4. Revisão jurídica dos termos, da política de privacidade e da página LGPD.
-5. Licença do desenho do braço da logo (a imagem original tem marca d'água de banco de imagens) ou um braço redesenhado.
+1. Endereço exato, WhatsApp, Instagram, razão social e CNPJ no painel.
+2. Domínio e e-mail com SPF/DKIM configurados.
+3. Revisão jurídica dos termos, da política de privacidade e da página LGPD.
+4. Licença do desenho do braço da logo (a imagem original tem marca d'água de banco de imagens) ou um braço redesenhado.

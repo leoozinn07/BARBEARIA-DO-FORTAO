@@ -1,7 +1,7 @@
 // Cada acontecimento da agenda vira e-mail na fila + aviso no sino do site, gravados na mesma transação.
 // Depois do commit, `entregarAgora()` pede a entrega dos e-mails sem esperar o próximo ciclo.
 import { config } from '../config.js';
-import { consulta, executar, umaLinha } from '../db/index.js';
+import { consulta, umaLinha } from '../db/index.js';
 import * as modelos from '../emails/modelos.js';
 import { enfileirarEmail, acordarEntregador } from '../emails/fila.js';
 import { descreverDataHora, reais } from '../lib/tempo.js';
@@ -9,7 +9,7 @@ import { enderecoCompleto, lerConfiguracoes } from './configuracoes.js';
 
 export async function criarAviso(conn, { usuarioId, tipo, titulo, corpo, link = null }) {
   if (!usuarioId) return;
-  await executar('INSERT INTO notificacoes (usuario_id, tipo, titulo, corpo, link) VALUES ($1, $2, $3, $4, $5)', [usuarioId, tipo, titulo, corpo, link], conn);
+  await consulta('INSERT INTO notificacoes (usuario_id, tipo, titulo, corpo, link) VALUES (?, ?, ?, ?, ?)', [usuarioId, tipo, titulo, corpo, link], conn);
 }
 
 async function admins(conn) {
@@ -18,7 +18,7 @@ async function admins(conn) {
 
 async function emailDoCliente(conn, clienteId) {
   if (!clienteId) return null;
-  return umaLinha('SELECT nome, email FROM usuarios WHERE id = $1 AND excluido_em IS NULL', [clienteId], conn);
+  return umaLinha('SELECT nome, email FROM usuarios WHERE id = ? AND excluido_em IS NULL', [clienteId], conn);
 }
 
 /** Chame depois do commit: entrega os e-mails da fila sem esperar o próximo ciclo. */

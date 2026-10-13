@@ -2,47 +2,36 @@
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import pg from 'pg';
+import mysql from 'mysql2/promise';
+import { config } from '../config.js';
 import { log } from '../lib/log.js';
-import { PREPARAR_SESSAO, opcoesConexao } from './index.js';
 
 const PASTA = path.join(path.dirname(fileURLToPath(import.meta.url)), 'migracoes');
 
 export async function migrar() {
-  // Conexão própria, fora do pool, só para as migrações
-  const conn = new pg.Client(opcoesConexao());
-  await conn.connect();
+  // Conexão própria com multipleStatements, só para rodar os arquivos de migração
+  const conn = await mysql.createConnection({ ...config.mysql, multipleStatements: true, timezone: 'Z' });
   try {
-    await conn.query('CREATE SCHEMA IF NOT EXISTS barbearia');
-    await conn.query(PREPARAR_SESSAO);
-    // Trava da sessão: duas instâncias subindo juntas não aplicam a mesma migração duas vezes
-    await conn.query("SELECT pg_advisory_lock(hashtextextended('barbearia:migracoes', 0))");
-    await conn.query(`CREATE TABLE IF NOT EXISTS barbearia.migracoes (
-      nome varchar(120) PRIMARY KEY,
-      aplicada_em timestamptz NOT NULL DEFAULT now()
-    )`);
-    await conn.query('ALTER TABLE barbearia.migracoes ENABLE ROW LEVEL SECURITY');
-    const { rows } = await conn.query('SELECT nome FROM barbearia.migracoes');
-    const aplicadas = new Set(rows.map((l) => l.nome));
+    await conn.query("SET time_zone = '+00:00'");
+    await conn.query(`CREATE TABLE IF NOT EXISTS migracoes (
+      nome VARCHAR(120) PRIMARY KEY,
+      aplicada_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB`);
+    // Trava nomeada: duas instâncias subindo juntas não aplicam a mesma migração duas vezes
+    await conn.query("SELECT GET_LOCK('fortao_migracoes', 30)");
+    const [feitas] = await conn.query('SELECT nome FROM migracoes');
+    const aplicadas = new Set(feitas.map((l) => l.nome));
     const arquivos = (await readdir(PASTA)).filter((a) => a.endsWith('.sql')).sort();
     let novas = 0;
     for (const arquivo of arquivos) {
       if (aplicadas.has(arquivo)) continue;
       const sql = await readFile(path.join(PASTA, arquivo), 'utf8');
-      // Cada arquivo roda inteiro numa transação: ou entra tudo, ou nada
-      await conn.query('BEGIN');
-      try {
-        await conn.query(sql);
-        await conn.query('INSERT INTO barbearia.migracoes (nome) VALUES ($1)', [arquivo]);
-        await conn.query('COMMIT');
-      } catch (e) {
-        await conn.query('ROLLBACK').catch(() => {});
-        throw new Error(`${arquivo}: ${e.message}`);
-      }
+      await conn.query(sql);
+      await conn.query('INSERT INTO migracoes (nome) VALUES (?)', [arquivo]);
       log.info('migracao_aplicada', { arquivo });
       novas++;
     }
-    await conn.query("SELECT pg_advisory_unlock(hashtextextended('barbearia:migracoes', 0))");
+    await conn.query("SELECT RELEASE_LOCK('fortao_migracoes')");
     return novas;
   } finally {
     await conn.end();

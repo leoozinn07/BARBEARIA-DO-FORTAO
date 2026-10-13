@@ -1,10 +1,10 @@
 # Barbearia do Fortão
 
-Site de agendamento da Barbearia do Fortão, na Cohab 5 (São Paulo). O cliente marca corte e serviços de cabelo pelo site e paga na barbearia. O Fortão tem um painel para tocar a agenda, mudar preços e serviços e ver o rendimento. O banco de dados fica no Supabase.
+Site de agendamento da Barbearia do Fortão, na Cohab 5 (São Paulo). O cliente marca corte e serviços de cabelo pelo site e paga na barbearia. O Fortão tem um painel para tocar a agenda, mudar preços e serviços e ver o rendimento. Feito em HTML, CSS e JavaScript, com Node e MySQL.
 
 ![Telas do site](docs/previas/visao-geral.jpg)
 
-<sub>Prévias tiradas de um banco local com horários de exemplo. O banco do Supabase começa vazio, só com os serviços e os horários de funcionamento.</sub>
+<sub>Prévias tiradas de um banco local com horários de exemplo. Um banco novo começa vazio, só com os serviços e os horários de funcionamento.</sub>
 
 ## O que funciona
 
@@ -13,7 +13,7 @@ Site de agendamento da Barbearia do Fortão, na Cohab 5 (São Paulo). O cliente 
 - **Rendimento:** quanto entrou (horários concluídos), quanto ainda vai entrar (confirmados), atendimentos, ticket médio e faltas, com gráfico por dia ou por mês, divisão por serviço, tabela e comparação com o período anterior.
 - **Sem pagamento online:** o preço aparece antes de confirmar e é pago na barbearia.
 - **Visual:** preto e cinza, ilustrações próprias de ferramentas de barbeiro e dourado só em detalhes. Ao tocar em qualquer botão ou caixa, aparece um contorno dourado.
-- **Segurança:** banco no Supabase com tabelas fora da API pública e RLS ligado, conexão criptografada com certificado conferido, senha com argon2id, sessão em cookie HttpOnly, proteção CSRF, limite de tentativas, CSP sem script inline e nenhum horário duplicado (o próprio banco recusa sobreposição).
+- **Segurança:** senha com argon2id, sessão em cookie HttpOnly, proteção CSRF, limite de tentativas, bloqueio da conta após 8 senhas erradas, CSP sem script inline, MySQL fechado para a internet no Docker e nenhum horário duplicado mesmo com pedidos simultâneos.
 - **LGPD:** aceite registrado com versão, só cookies essenciais, mapa do Google só depois do toque, baixar e excluir os dados pela conta, termos, privacidade e página de direitos do titular.
 
 ## Catálogo inicial
@@ -26,28 +26,26 @@ Site de agendamento da Barbearia do Fortão, na Cohab 5 (São Paulo). O cliente 
 
 Preços, durações e serviços novos se mudam no painel, aba Serviços. Mudar um preço não altera horários já marcados.
 
-## Banco de dados (Supabase)
-
-O projeto **barbearia-do-fortao** (região São Paulo) já está criado na sua conta do Supabase, com as tabelas, as proteções e o catálogo inicial. Para o site se conectar:
-
-1. No Supabase, abra o projeto e vá em **Connect**. Copie a conexão **Session pooler** e troque `[YOUR-PASSWORD]` pela senha do banco (se não lembrar, gere outra em **Project Settings > Database > Reset database password**).
-2. Em **Database > Settings > SSL Configuration**, baixe o certificado e salve como `certs/supabase-ca.crt`.
-3. Coloque a conexão em `DATABASE_URL` no `.env` (modelo em `.env.example`).
-
-O site nunca usa as chaves `anon` ou `service_role`: só o servidor fala com o banco, pela senha.
-
 ## Rodar no computador
 
-Precisa de Node 22 e da `DATABASE_URL` do Supabase (ou de um Postgres local).
+Precisa de Node 22 e MySQL 8.
 
 ```bash
-cp .env.example .env        # ajuste NODE_ENV=development, APP_URL=http://localhost:3000 e a DATABASE_URL
+# 1. Banco
+mysql -uroot -e "CREATE DATABASE fortao CHARACTER SET utf8mb4; CREATE USER 'fortao'@'localhost' IDENTIFIED BY 'fortao_dev'; GRANT ALL ON fortao.* TO 'fortao'@'localhost';"
+
+# 2. Configuração
+cp .env.example .env        # ajuste NODE_ENV=development, APP_URL=http://localhost:3000 e a senha do MySQL
+
+# 3. Instalar e criar o admin
 npm install
 npm run admin:criar -- --email fortao@seuemail.com --nome "Fortão"
+
+# 4. Subir
 npm run dev                 # http://localhost:3000
 ```
 
-As tabelas são criadas sozinhas na primeira vez (no Supabase elas já existem). Sem SMTP configurado, os e-mails ficam salvos em `var/emails/` e o painel avisa.
+As tabelas são criadas sozinhas na primeira vez. Sem SMTP configurado, os e-mails ficam salvos em `var/emails/` e o painel avisa.
 
 Para conferir o código: `npm run lint`.
 
@@ -56,7 +54,7 @@ Para conferir o código: `npm run lint`.
 ```
 servidor/
   app.js, index.js       Express: segurança, páginas, API, rotinas
-  db/                    conexão com o Postgres, migrações SQL, carga inicial
+  db/                    conexão com o MySQL, migrações SQL, carga inicial
   rotas/                 públicas, contas, área do cliente, painel (com rendimento)
   servicos/              agenda, eventos, lembretes, configurações
   emails/                modelos e fila de envio com novas tentativas
@@ -69,7 +67,7 @@ docs/                    especificação, deploy, melhorias, prévias
 
 ## Próximos passos
 
-1. Ligar o site ao Supabase (seção acima) e colocar no ar: [docs/deploy.md](docs/deploy.md).
+1. Colocar no ar: [docs/deploy.md](docs/deploy.md).
 2. Preencher endereço, WhatsApp, Instagram e dados da empresa no painel (aba Barbearia).
 3. Escolher melhorias: [docs/melhorias.md](docs/melhorias.md).
 

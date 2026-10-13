@@ -1,6 +1,6 @@
 # Especificação: site da Barbearia do Fortão
 
-Versão de 13/10/2026. Antes era site + app Android; agora é só o site, hospedado, com o banco no Supabase.
+Versão de 13/10/2026. Antes era site + app Android; agora é só o site, hospedado, com Node e MySQL.
 Base visual: opção C ("Cadeira") com a logo da opção A, preto e cinza, dourado só em detalhes.
 
 ## 1. Objetivo
@@ -17,10 +17,10 @@ Sucesso é: cliente marca em poucos toques, não esquece o horário, o Fortão n
 | Sem fotos do Fortão | Ilustrações próprias de ferramentas de barbeiro (navalha, tesoura, pente, máquina, pincel), em SVG |
 | Sem sistema de pagamento | Preço aparece antes de confirmar; pagamento na barbearia |
 | Fortão altera preços e serviços | Painel > Serviços: criar, editar nome, preço, duração e descrição, esconder ou remover |
-| Banco no Supabase | Postgres do Supabase, região São Paulo, tabelas fora da API pública e RLS ligado |
+| Banco de dados | MySQL 8, como antes. No Docker, o banco não abre porta para a internet |
 | Dourado em detalhes e no toque | Preço da tabela, contador de avisos, escolha marcada, gráfico; contorno dourado ao tocar em botão ou caixa |
 | Rendimento | Painel > Rendimento: recebido, a receber, atendimentos, ticket médio, faltas, gráfico por dia ou mês e por serviço |
-| Tudo funcional, sem "testes" | Sem dados de exemplo e sem suíte de testes no repositório. O fluxo foi conferido à mão num Postgres local |
+| Tudo funcional, sem "testes" | Sem dados de exemplo e sem suíte de testes no repositório. O fluxo foi conferido à mão num MySQL local |
 | Catálogo inicial | Corte Fortão R$ 40 (40 min), Corte e sobrancelha R$ 45 (45 min), Corte e barba R$ 50 (60 min) |
 | Não informado | Terça a sexta 9h às 20h, sábado 8h às 18h; antecedência de 30 min; agenda aberta 30 dias; cancelar até 2 h antes |
 
@@ -29,7 +29,7 @@ Sucesso é: cliente marca em poucos toques, não esquece o horário, o Fortão n
 ```
 Navegador (HTML + CSS + JS em módulos, sem framework)
    ▼
-Node 22 + Express 5 ──TLS──► Supabase (Postgres 17, schema "barbearia")
+Node 22 + Express 5 ──► MySQL 8
    │                            ├─ dados (usuários, agenda, avisos…)
    │                            └─ fila de e-mails (outbox)
    ├─ a cada minuto: lembretes 24 h e 2 h
@@ -39,10 +39,10 @@ Node 22 + Express 5 ──TLS──► Supabase (Postgres 17, schema "barbearia"
 ```
 
 - Páginas em `publico/`, servidas pelo Express com URLs limpas (`/entrar`, `/conta`, `/admin`). API JSON em `/api/*`.
-- O servidor fala com o banco pela conexão Postgres (driver `pg`), com o certificado do Supabase conferido. O navegador nunca fala com o Supabase.
+- Só o servidor fala com o banco (driver `mysql2`, consultas sempre com parâmetros). O navegador nunca acessa o banco.
 - Lembretes e e-mails usam reserva atômica no banco: mais de uma instância não duplica envio.
 
-## 4. Banco de dados (Supabase / Postgres)
+## 4. Banco de dados (MySQL 8)
 
 | Tabela | Para quê |
 | --- | --- |
@@ -54,16 +54,17 @@ Node 22 + Express 5 ──TLS──► Supabase (Postgres 17, schema "barbearia"
 | `servicos` | Nome, preço em centavos, duração, ativo, ordem |
 | `horarios_funcionamento` | Faixas por dia da semana (permite pausa de almoço) |
 | `bloqueios` | Períodos fechados pelo Fortão |
-| `agendamentos` | Horário (timestamptz), cópia do nome e do preço do serviço, status, marcações de lembrete |
+| `agendamentos` | Horário em UTC, cópia do nome e do preço do serviço, status, origem (site ou balcão), marcações de lembrete |
+| `agenda_travas` | Uma linha por barbeiro e dia, travada com `SELECT … FOR UPDATE` ao marcar |
 | `notificacoes` | Avisos do sino |
 | `emails_saida` | Fila de e-mails |
-| `configuracoes` | Endereço, contatos, regras da agenda (jsonb) |
+| `configuracoes` | Endereço, contatos, regras da agenda (JSON) |
 | `auditoria` | Ações do admin e eventos de segurança |
 | `migracoes` | Quais arquivos de `servidor/db/migracoes/` já rodaram |
 
-**Proteção no Supabase:** tudo no schema `barbearia`, que a API automática (PostgREST) não expõe; RLS ligado em todas as tabelas sem nenhuma política; `anon` e `authenticated` sem nenhum privilégio. Só o servidor, com a senha do banco, lê e grava.
+A migração `002_site.sql` tira a tabela de inscrições de notificação push e troca a origem "app" por "site". Ela roda sozinha em bancos que já tinham a versão anterior.
 
-**Sem horário duplicado, em duas camadas:** ao marcar ou remarcar, a transação pega uma trava do dia (`pg_advisory_xact_lock`) e confere sobreposição com horários e folgas. Por baixo, a restrição de exclusão `ex_agendamentos_sem_sobreposicao` (btree_gist) faz o próprio banco recusar dois horários sobrepostos do mesmo barbeiro.
+**Sem horário duplicado:** ao marcar ou remarcar, a transação trava a linha do dia em `agenda_travas`, confere sobreposição com horários e folgas e só então grava. Dois pedidos simultâneos para o mesmo horário: um entra, o outro recebe "esse horário acabou de ser ocupado".
 
 **Preço congelado:** o agendamento guarda o preço do momento da marcação. Mudar a tabela não muda horários já marcados nem o rendimento de meses anteriores.
 
@@ -76,6 +77,7 @@ Node 22 + Express 5 ──TLS──► Supabase (Postgres 17, schema "barbearia"
 - **Faltas:** quantidade e valor que não entrou. **Cancelados** não contam.
 - **Ticket médio:** recebido ÷ atendimentos concluídos.
 - **Comparação:** com o período anterior equivalente (mês com mês, nos mesmos dias já passados).
+- As somas por dia são feitas no servidor, no horário de São Paulo, sem depender das tabelas de fuso do MySQL.
 - Horário confirmado vira concluído sozinho 3 h depois do fim. Se o cliente não veio, o Fortão marca "Faltou" (dá para desfazer).
 - Gráfico de colunas empilhadas por dia (até 62 dias) ou por mês, lista por serviço e tabela com os mesmos números.
 
@@ -86,15 +88,14 @@ Node 22 + Express 5 ──TLS──► Supabase (Postgres 17, schema "barbearia"
 - CSRF: cookie + cabeçalho iguais e conferência de `Origin`.
 - Limites por IP em login, cadastro, senha e agendamento; conta trava 15 min depois de 8 senhas erradas.
 - Helmet com CSP sem script inline, HSTS em produção.
-- Entrada validada com Zod; SQL só com parâmetros (`$1, $2…`); front sem `innerHTML` com dado do usuário.
-- Conexão com o banco sempre criptografada e com certificado conferido fora da máquina local.
+- Entrada validada com Zod; SQL só com parâmetros; front sem `innerHTML` com dado do usuário.
+- No Docker, o MySQL fica numa rede interna, sem porta aberta para a internet; o site usa um usuário com acesso só ao banco `fortao`.
 
 ## 7. LGPD
 
 - Coleta mínima: nome, e-mail, telefone opcional. Aceite registrado com versão; marketing opcional e separado.
 - Só cookies essenciais; fontes e ícones servidos pelo próprio site; mapa do Google só depois do toque.
 - Na conta: baixar os dados (JSON) e excluir a conta (anonimiza, cancela horários futuros, mantém o histórico sem dados pessoais).
-- Supabase listado como operador na política de privacidade.
 
 ## 8. E-mails e avisos
 

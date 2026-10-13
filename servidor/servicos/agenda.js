@@ -1,7 +1,6 @@
 // Agenda: horários livres, marcar, remarcar, cancelar e mudar status.
-// Regra de ouro: marcar e remarcar travam o dia e conferem conflito dentro da mesma transação.
-// Se ainda assim dois pedidos passassem juntos, o banco recusa a sobreposição (restrição de exclusão).
-import { PG, consulta, executar, umaLinha, transacao } from '../db/index.js';
+// Regra de ouro: marcar e remarcar travam o dia (agenda_travas) e conferem conflito dentro da mesma transação.
+import { consulta, umaLinha, transacao } from '../db/index.js';
 import { erros } from '../lib/erros.js';
 import { gerarCodigo } from '../lib/seguranca.js';
 import * as tempo from '../lib/tempo.js';
@@ -18,25 +17,25 @@ export const STATUS_OCUPA = ['confirmado', 'concluido', 'faltou'];
 export async function listarServicos({ incluirInativos = false } = {}) {
   return consulta(
     `SELECT id, slug, nome, descricao, preco_centavos, duracao_min, ativo, ordem FROM servicos
-      ${incluirInativos ? '' : 'WHERE ativo'} ORDER BY ordem, id`,
+      ${incluirInativos ? '' : 'WHERE ativo = 1'} ORDER BY ordem, id`,
   );
 }
 
 async function servicoAtivo(slug, conn) {
-  const s = await umaLinha('SELECT id, slug, nome, preco_centavos, duracao_min FROM servicos WHERE slug = $1 AND ativo', [slug], conn);
+  const s = await umaLinha('SELECT id, slug, nome, preco_centavos, duracao_min FROM servicos WHERE slug = ? AND ativo = 1', [slug], conn);
   if (!s) throw erros.requisicao('Esse serviço não está disponível.', { codigo: 'servico_invalido' });
   return s;
 }
 
 export async function barbeiroPadrao(conn) {
-  const b = await umaLinha('SELECT id FROM barbeiros WHERE ativo ORDER BY id LIMIT 1', [], conn);
+  const b = await umaLinha('SELECT id FROM barbeiros WHERE ativo = 1 ORDER BY id LIMIT 1', [], conn);
   if (!b) throw new Error('Nenhum barbeiro ativo cadastrado. Rode npm run semear.');
   return b.id;
 }
 
 /** Map dia_semana => [{abre, fecha}] em minutos do dia */
 export async function faixasDoBarbeiro(barbeiroId, conn) {
-  const linhas = await consulta('SELECT dia_semana, abre, fecha FROM horarios_funcionamento WHERE barbeiro_id = $1 ORDER BY dia_semana, abre', [barbeiroId], conn);
+  const linhas = await consulta('SELECT dia_semana, abre, fecha FROM horarios_funcionamento WHERE barbeiro_id = ? ORDER BY dia_semana, abre', [barbeiroId], conn);
   const mapa = new Map();
   for (const l of linhas) {
     if (!mapa.has(l.dia_semana)) mapa.set(l.dia_semana, []);
@@ -49,11 +48,11 @@ export async function faixasDoBarbeiro(barbeiroId, conn) {
 async function ocupacoes(barbeiroId, de, ate, conn, ignorarId = null) {
   const ags = await consulta(
     `SELECT inicio, fim FROM agendamentos
-      WHERE barbeiro_id = $1 AND status = ANY($2::text[]) AND inicio < $3 AND fim > $4 AND id <> $5`,
-    [barbeiroId, STATUS_OCUPA, ate, de, ignorarId ?? 0],
+      WHERE barbeiro_id = ? AND status IN (?) AND inicio < ? AND fim > ? ${ignorarId ? 'AND id <> ?' : ''}`,
+    [barbeiroId, STATUS_OCUPA, ate, de, ...(ignorarId ? [ignorarId] : [])],
     conn,
   );
-  const bloqs = await consulta('SELECT inicio, fim FROM bloqueios WHERE barbeiro_id = $1 AND inicio < $2 AND fim > $3', [barbeiroId, ate, de], conn);
+  const bloqs = await consulta('SELECT inicio, fim FROM bloqueios WHERE barbeiro_id = ? AND inicio < ? AND fim > ?', [barbeiroId, ate, de], conn);
   return [...ags, ...bloqs].map((o) => ({ ini: new Date(o.inicio).getTime(), fim: new Date(o.fim).getTime() }));
 }
 
@@ -117,28 +116,22 @@ export async function diasDisponiveis({ slug }) {
 
 // ----------------------------------------------------------------- escrita
 
-/**
- * Dentro da transação: trava o dia daquele barbeiro (trava consultiva do Postgres, solta sozinha no commit).
- * Quem chegar depois para o mesmo dia espera aqui até o primeiro terminar.
- */
-async function travarDia(conn, barbeiroId, dataISO) {
-  await consulta('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`agenda:${barbeiroId}:${dataISO}`], conn);
+/** Garante a linha do dia fora de qualquer transação (INSERT IGNORE concorrente dentro de transação gera impasse). */
+async function prepararTrava(barbeiroId, dataISO) {
+  await consulta('INSERT IGNORE INTO agenda_travas (barbeiro_id, dia) VALUES (?, ?)', [barbeiroId, dataISO]);
 }
 
-/** `travar` segura a linha do agendamento até o fim da transação. */
-export async function buscarAgendamento(where, params, conn, { travar = false } = {}) {
+/** Dentro da transação: trava o dia. Quem chegar depois espera aqui até o primeiro terminar. */
+async function travarDia(conn, barbeiroId, dataISO) {
+  await consulta('SELECT barbeiro_id FROM agenda_travas WHERE barbeiro_id = ? AND dia = ? FOR UPDATE', [barbeiroId, dataISO], conn);
+}
+
+export async function buscarAgendamento(where, params, conn) {
   return umaLinha(
-    `SELECT a.*, u.email AS cliente_email FROM agendamentos a LEFT JOIN usuarios u ON u.id = a.cliente_id
-      WHERE ${where} ${travar ? 'FOR UPDATE OF a' : ''}`,
+    `SELECT a.*, u.email AS cliente_email FROM agendamentos a LEFT JOIN usuarios u ON u.id = a.cliente_id WHERE ${where}`,
     params,
     conn,
   );
-}
-
-/** A restrição de exclusão do banco é a última barreira contra horário duplicado. */
-function horarioOcupado(e) {
-  if (e?.code === PG.sobreposicao) return erros.conflito('Esse horário acabou de ser ocupado. Escolha outro.', 'horario_ocupado');
-  return e;
 }
 
 /** Confere se `inicio` é um horário válido e livre agora, já com o dia travado. */
@@ -173,7 +166,7 @@ export async function criarAgendamento({ cliente = null, avulso = null, slug, in
 
   if (cliente && !porAdmin) {
     const { total } = await umaLinha(
-      "SELECT COUNT(*) AS total FROM agendamentos WHERE cliente_id = $1 AND status = 'confirmado' AND inicio > now()",
+      "SELECT COUNT(*) AS total FROM agendamentos WHERE cliente_id = ? AND status = 'confirmado' AND inicio > UTC_TIMESTAMP()",
       [cliente.id],
     );
     if (total >= regras.max_futuros_por_cliente) {
@@ -183,6 +176,7 @@ export async function criarAgendamento({ cliente = null, avulso = null, slug, in
 
   const servico = await servicoAtivo(slug);
   const barbeiroId = await barbeiroPadrao();
+  await prepararTrava(barbeiroId, tempo.dataLocalISO(inicio));
   const agendamento = await transacao(async (conn) => {
     await travarDia(conn, barbeiroId, tempo.dataLocalISO(inicio));
     await garantirHorarioLivre(conn, { barbeiroId, servico, inicio, semAntecedencia: porAdmin });
@@ -190,18 +184,23 @@ export async function criarAgendamento({ cliente = null, avulso = null, slug, in
     const { l24, l2 } = lembretesIniciais(inicio);
     const nome = cliente?.nome ?? avulso?.nome;
     const telefone = cliente?.telefone ?? avulso?.telefone ?? null;
-    // Código repetido (raríssimo) seria erro de chave única e derrubaria a transação: sorteia até achar um livre
-    let codigo = gerarCodigo();
-    while (await umaLinha('SELECT 1 FROM agendamentos WHERE codigo = $1', [codigo], conn)) codigo = gerarCodigo();
-    const { id } = await umaLinha(
-      `INSERT INTO agendamentos (codigo, cliente_id, cliente_nome, cliente_telefone, barbeiro_id, servico_id, servico_nome,
-         preco_centavos, duracao_min, inicio, fim, origem, observacao, lembrete_24h_em, lembrete_2h_em)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id`,
-      [codigo, cliente?.id ?? null, nome, telefone, barbeiroId, servico.id, servico.nome, servico.preco_centavos,
-        servico.duracao_min, inicio, fim, origem, observacao, l24, l2],
-      conn,
-    ).catch((e) => { throw horarioOcupado(e); });
-    const ag = await buscarAgendamento('a.id = $1', [id], conn);
+    let id;
+    for (let tentativa = 0; !id; tentativa++) {
+      try {
+        const r = await consulta(
+          `INSERT INTO agendamentos (codigo, cliente_id, cliente_nome, cliente_telefone, barbeiro_id, servico_id, servico_nome,
+             preco_centavos, duracao_min, inicio, fim, origem, observacao, lembrete_24h_em, lembrete_2h_em)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [gerarCodigo(), cliente?.id ?? null, nome, telefone, barbeiroId, servico.id, servico.nome, servico.preco_centavos,
+            servico.duracao_min, inicio, fim, origem, observacao, l24, l2],
+          conn,
+        );
+        id = r.insertId;
+      } catch (e) {
+        if (e.code !== 'ER_DUP_ENTRY' || tentativa >= 4) throw e; // código repetido: sorteia outro
+      }
+    }
+    const ag = await buscarAgendamento('a.id = ?', [id], conn);
     await eventos.aoAgendar(conn, ag);
     return ag;
   });
@@ -220,19 +219,19 @@ function conferirPrazoCliente(ag, regras) {
 export async function cancelarAgendamento({ codigo, usuario, porAdmin = false, motivo = null }) {
   const { agenda: regras } = await lerConfiguracoes();
   const ag = await transacao(async (conn) => {
-    const ag = await buscarAgendamento('a.codigo = $1', [codigo], conn, { travar: true });
+    const ag = await buscarAgendamento('a.codigo = ? FOR UPDATE', [codigo], conn);
     if (!ag || (!porAdmin && ag.cliente_id !== usuario.id)) throw erros.naoEncontrado('Horário não encontrado.');
     if (porAdmin) {
       if (ag.status !== 'confirmado') throw erros.conflito('Só dá para cancelar horários confirmados.', 'status_invalido');
     } else {
       conferirPrazoCliente(ag, regras);
     }
-    await executar(
-      "UPDATE agendamentos SET status = 'cancelado', cancelado_por = $1, motivo_cancelamento = $2 WHERE id = $3",
+    await consulta(
+      "UPDATE agendamentos SET status = 'cancelado', cancelado_por = ?, motivo_cancelamento = ? WHERE id = ?",
       [porAdmin ? 'admin' : 'cliente', motivo, ag.id],
       conn,
     );
-    const atualizado = await buscarAgendamento('a.id = $1', [ag.id], conn);
+    const atualizado = await buscarAgendamento('a.id = ?', [ag.id], conn);
     await eventos.aoCancelar(conn, atualizado, { porAdmin, motivo });
     return atualizado;
   });
@@ -246,14 +245,17 @@ export async function remarcarAgendamento({ codigo, usuario, inicio: inicioISO, 
   if (Number.isNaN(novoInicio.getTime())) throw erros.validacao({ inicio: 'Horário inválido.' });
   conferirJanela(tempo.dataLocalISO(novoInicio), regras);
   const barbeiroId = await barbeiroPadrao();
+  const anterior = await umaLinha('SELECT inicio FROM agendamentos WHERE codigo = ?', [codigo]);
+  if (anterior) await prepararTrava(barbeiroId, tempo.dataLocalISO(new Date(anterior.inicio)));
+  await prepararTrava(barbeiroId, tempo.dataLocalISO(novoInicio));
 
   const ag = await transacao(async (conn) => {
-    const atual = await buscarAgendamento('a.codigo = $1', [codigo], conn);
+    const atual = await buscarAgendamento('a.codigo = ?', [codigo], conn);
     if (!atual || (!porAdmin && atual.cliente_id !== usuario.id)) throw erros.naoEncontrado('Horário não encontrado.');
     // Trava os dois dias (antigo e novo) sempre na mesma ordem, para não haver impasse entre transações
     const dias = [...new Set([tempo.dataLocalISO(new Date(atual.inicio)), tempo.dataLocalISO(novoInicio)])].sort();
     for (const d of dias) await travarDia(conn, barbeiroId, d);
-    const ag = await buscarAgendamento('a.id = $1', [atual.id], conn, { travar: true });
+    const ag = await buscarAgendamento('a.id = ? FOR UPDATE', [atual.id], conn);
     if (porAdmin) {
       if (ag.status !== 'confirmado') throw erros.conflito('Só dá para remarcar horários confirmados.', 'status_invalido');
     } else {
@@ -263,9 +265,8 @@ export async function remarcarAgendamento({ codigo, usuario, inicio: inicioISO, 
     await garantirHorarioLivre(conn, { barbeiroId, servico, inicio: novoInicio, ignorarId: ag.id, semAntecedencia: porAdmin });
     const fim = new Date(novoInicio.getTime() + ag.duracao_min * MIN);
     const { l24, l2 } = lembretesIniciais(novoInicio);
-    await executar('UPDATE agendamentos SET inicio = $1, fim = $2, lembrete_24h_em = $3, lembrete_2h_em = $4 WHERE id = $5', [novoInicio, fim, l24, l2, ag.id], conn)
-      .catch((e) => { throw horarioOcupado(e); });
-    const atualizado = await buscarAgendamento('a.id = $1', [ag.id], conn);
+    await consulta('UPDATE agendamentos SET inicio = ?, fim = ?, lembrete_24h_em = ?, lembrete_2h_em = ? WHERE id = ?', [novoInicio, fim, l24, l2, ag.id], conn);
+    const atualizado = await buscarAgendamento('a.id = ?', [ag.id], conn);
     await eventos.aoRemarcar(conn, atualizado, new Date(ag.inicio));
     return atualizado;
   });
@@ -275,14 +276,14 @@ export async function remarcarAgendamento({ codigo, usuario, inicio: inicioISO, 
 
 /** Admin: concluído, faltou ou de volta a confirmado (para corrigir um toque errado). */
 export async function definirStatus({ codigo, status }) {
-  const ag = await buscarAgendamento('a.codigo = $1', [codigo]);
+  const ag = await buscarAgendamento('a.codigo = ?', [codigo]);
   if (!ag) throw erros.naoEncontrado('Horário não encontrado.');
   if (ag.status === 'cancelado') throw erros.conflito('Esse horário foi cancelado.', 'status_invalido');
   if (new Date(ag.inicio).getTime() > Date.now() + 30 * MIN) {
     throw erros.conflito('Só dá para marcar como concluído ou falta depois que o horário começar.', 'cedo_demais');
   }
-  await executar('UPDATE agendamentos SET status = $1 WHERE id = $2', [status, ag.id]);
-  return buscarAgendamento('a.id = $1', [ag.id]);
+  await consulta('UPDATE agendamentos SET status = ? WHERE id = ?', [status, ag.id]);
+  return buscarAgendamento('a.id = ?', [ag.id]);
 }
 
 // ----------------------------------------------------------------- saída

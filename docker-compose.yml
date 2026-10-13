@@ -1,12 +1,34 @@
-# Sobe o site e o Caddy (HTTPS automático com Let's Encrypt) em um servidor. O banco é o Supabase.
-# Uso: copie .env.example para .env, preencha, coloque o certificado do Supabase em certs/ e rode `docker compose up -d --build`.
+# Sobe tudo em um servidor: MySQL 8, o app e o Caddy (HTTPS automático com Let's Encrypt).
+# Uso: copie .env.example para .env, preencha, e rode `docker compose up -d --build`.
 services:
+  banco:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_BANCO:-fortao}
+      MYSQL_USER: ${MYSQL_USUARIO:-fortao}
+      MYSQL_PASSWORD: ${MYSQL_SENHA:?defina MYSQL_SENHA no .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_SENHA_ROOT:?defina MYSQL_SENHA_ROOT no .env}
+      TZ: UTC
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci", "--default-time-zone=+00:00"]
+    volumes:
+      - dados-mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${MYSQL_SENHA_ROOT}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   app:
     build: .
     restart: unless-stopped
     env_file: .env
-    volumes:
-      - ./certs:/app/certs:ro
+    environment:
+      MYSQL_HOST: banco
+      MYSQL_PORTA: 3306
+    depends_on:
+      banco:
+        condition: service_healthy
     expose:
       - "3000"
 
@@ -25,4 +47,5 @@ services:
       - app
 
 volumes:
+  dados-mysql:
   dados-caddy:
