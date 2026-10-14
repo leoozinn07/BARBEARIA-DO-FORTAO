@@ -165,11 +165,12 @@
       <form class="grupo-form" data-form-barbearia novalidate>
         <h2 id="barb-titulo">Dados da barbearia</h2>
         <p class="alerta alerta--erro" data-erro-geral role="alert" tabindex="-1" hidden></p>
-        <div class="campo"><label for="c-endereco">Endereço (rua e número)</label><input id="c-endereco" name="negocio.endereco" maxlength="160"><p class="erro-campo" data-erro-de="negocio.endereco"></p></div>
+        <div class="campo"><label for="c-endereco">Endereço (rua e número)</label><input id="c-endereco" name="negocio.endereco" maxlength="160" placeholder="Av. Tancredo de Almeida Neves, 1463"><p class="erro-campo" data-erro-de="negocio.endereco"></p></div>
         <div class="duas-colunas">
           <div class="campo"><label for="c-bairro">Bairro</label><input id="c-bairro" name="negocio.bairro" maxlength="80"></div>
           <div class="campo"><label for="c-cidade">Cidade</label><input id="c-cidade" name="negocio.cidade" maxlength="80"></div>
         </div>
+        <div class="campo"><label for="c-mapa">Link do Google Maps (opcional)</label><input id="c-mapa" name="negocio.mapa_link" type="url" inputmode="url" maxlength="300" placeholder="https://maps.app.goo.gl/..." aria-describedby="c-mapa-ajuda"><p class="ajuda" id="c-mapa-ajuda">Quando a barbearia estiver no Google (Perfil da Empresa), abra ela no Maps, toque em Compartilhar e cole o link aqui. Sem ele, o site usa o endereço acima.</p><p class="erro-campo" data-erro-de="negocio.mapa_link"></p></div>
         <div class="duas-colunas">
           <div class="campo"><label for="c-whatsapp">WhatsApp</label><input id="c-whatsapp" name="negocio.whatsapp" type="tel" inputmode="tel"><p class="erro-campo" data-erro-de="negocio.whatsapp"></p></div>
           <div class="campo"><label for="c-instagram">Instagram</label><input id="c-instagram" name="negocio.instagram" placeholder="@barbearia"></div>

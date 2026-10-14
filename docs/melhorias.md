@@ -50,7 +50,7 @@ Isso precisa de dados reais acumulados. O banco já guarda o histórico no forma
 
 ## Antes do lançamento (pendências)
 
-1. Endereço exato, WhatsApp, Instagram, razão social e CNPJ no painel.
+1. WhatsApp, Instagram, razão social e CNPJ no painel. O endereço já está (Av. Tancredo de Almeida Neves, 1463); falta só cadastrar a barbearia no Perfil da Empresa do Google e colar o link do Maps no painel, para o mapa abrir no cartão da barbearia, com fotos e avaliações.
 2. Domínio com HTTPS (a biometria só funciona com ele) e e-mail com SPF/DKIM configurados.
 3. Revisão jurídica dos termos, da política de privacidade e da página LGPD.
 4. Licença do desenho do braço da logo (a imagem original tem marca d'água de banco de imagens) ou um braço redesenhado.

@@ -4,6 +4,7 @@ import { definirTema, iniciarCasca, obterConfig } from './casca.js';
 import { montarAgendamento } from './agendamento.js';
 import { ativarBiometria, erroDaBiometria, temBiometriaNoAparelho, temSuporte } from './biometria.js';
 import { acoesLembrete } from './lembrete.js';
+import { linkRota } from './mapa.js';
 import {
   abrirFolha, dataCurta, h, hora, icone, ligarVerSenha, limparErros, mostrarErros, ocupado, primeiroNome, quando, reais, relativo, telefoneBonito, toast, toastErro,
 } from './ui.js';
@@ -70,7 +71,7 @@ function cartaoHorario(ag) {
       h('button', { class: 'botao botao--suave', type: 'button', onclick: () => abrirLembrete(ag) }, icone('bell-ringing'), 'Lembrete'),
       ag.pode_alterar ? h('button', { class: 'botao botao--suave', type: 'button', onclick: () => abrirRemarcar(ag) }, icone('arrows-left-right'), 'Remarcar') : null,
       ag.pode_alterar ? h('button', { class: 'botao botao--suave', type: 'button', onclick: () => abrirCancelar(ag) }, icone('x-circle'), 'Cancelar') : null,
-      h('a', { class: 'botao botao--suave', href: '/#onde' }, icone('map-pin'), 'Como chegar'),
+      h('a', { class: 'botao botao--suave', href: linkRota(config?.negocio), target: '_blank', rel: 'noopener' }, icone('map-pin'), 'Como chegar'),
     ),
     ag.pode_alterar ? null : h('p', { class: 'horario__nota' },
       `Faltam menos de ${config?.agenda?.cancelar_ate_horas ?? 2} h: já não dá para cancelar ou remarcar pelo site. Para mudar agora, fale com a barbearia`,

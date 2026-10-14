@@ -29,7 +29,7 @@ rotasPublicas.get('/config', rota(async (_req, res) => {
   );
   res.set('Cache-Control', 'public, max-age=60').json({
     negocio: {
-      nome: negocio.nome, endereco: negocio.endereco, bairro: negocio.bairro, cidade: negocio.cidade, uf: negocio.uf,
+      nome: negocio.nome, endereco: negocio.endereco, bairro: negocio.bairro, cidade: negocio.cidade, uf: negocio.uf, mapa_link: negocio.mapa_link,
       whatsapp: negocio.whatsapp, instagram: negocio.instagram, email_contato: negocio.email_contato,
       razao_social: negocio.razao_social, cnpj: negocio.cnpj, encarregado_email: negocio.encarregado_email,
     },

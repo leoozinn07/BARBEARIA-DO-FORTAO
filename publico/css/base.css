@@ -227,6 +227,8 @@ main { padding-bottom: 24px; }
 .rodape__links { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 18px; }
 .rodape__links a { display: inline-block; padding: 8px 0; font-size: 0.875rem; color: var(--texto); text-decoration: none; }
 .rodape__social { display: flex; gap: 10px; }
+.rodape__endereco { display: inline-flex; align-items: center; gap: 6px; padding: 6px 0; color: var(--texto); text-decoration: underline; text-decoration-color: var(--borda-forte); text-underline-offset: 3px; text-wrap: balance; }
+.rodape__endereco i { color: var(--ouro); font-size: 1.05rem; }
 
 /* ---------------------------------------------------------------- notificação estilo celular */
 .toast { position: fixed; z-index: 90; left: 10px; right: 10px; top: calc(10px + env(safe-area-inset-top));
@@ -269,6 +271,7 @@ dialog.folha[open]::backdrop { background: rgb(0 0 0 / 0.55); }
 .lembrete__titulo { font-size: 1rem; font-weight: 650; }
 .lembrete__botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .lembrete__botoes .botao { min-height: 48px; padding: 0 12px; }
+.lembrete__rota { min-height: 48px; }
 .lembrete__aviso { display: flex; gap: 8px; align-items: flex-start; font-size: 0.875rem; color: var(--texto-2); }
 .lembrete__aviso i { font-size: 1.15rem; color: var(--ouro); margin-top: 1px; flex: none; }
 .lembrete__aviso b { color: var(--texto); font-weight: 600; overflow-wrap: anywhere; }

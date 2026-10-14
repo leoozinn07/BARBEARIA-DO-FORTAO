@@ -1,6 +1,7 @@
 // "Casca" comum a todas as páginas: cabeçalho, avisos, abas e rodapé.
 import { carregarSessao, get, patch, post } from './api.js';
 import { h, icone, primeiroNome, relativo, revelar } from './ui.js';
+import { enderecoTexto, linkMapa } from './mapa.js';
 import './ouro.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -138,6 +139,11 @@ function ligarAvisos(usuario, naoLidas) {
 async function preencherRodape() {
   document.querySelectorAll('[data-ano]').forEach((e) => { e.textContent = new Date().getFullYear(); });
   const cfg = await obterConfig();
+  const endereco = $('[data-rodape-endereco]');
+  if (cfg && endereco) {
+    endereco.href = linkMapa(cfg.negocio);
+    endereco.querySelector('span').textContent = enderecoTexto(cfg.negocio);
+  }
   const social = $('[data-social]');
   if (!cfg || !social) return;
   const links = [];

@@ -24,10 +24,11 @@ export const HORARIOS_INICIAIS = [
 export const CONFIG_INICIAL = {
   negocio: {
     nome: 'Barbearia do Fortão',
-    endereco: '',
+    endereco: 'Av. Tancredo de Almeida Neves, 1463',
     bairro: 'Cohab 5',
-    cidade: 'São Paulo',
+    cidade: 'Carapicuíba',
     uf: 'SP',
+    mapa_link: '', // link de compartilhar do Google Maps (opcional); sem ele, o mapa usa o endereço
     whatsapp: '',
     instagram: '',
     email_contato: '',

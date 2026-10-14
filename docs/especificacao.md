@@ -5,7 +5,7 @@ Base visual: opção C ("Cadeira") com a logo da opção A, preto e cinza, doura
 
 ## 1. Objetivo
 
-Site para clientes da Barbearia do Fortão (Cohab 5, São Paulo) marcarem corte e serviços de cabelo sem fila, com confirmação e lembrete por e-mail e avisos na própria conta. O pagamento é feito na barbearia. O Fortão usa o painel para tocar a agenda, mudar preços e serviços e ver o rendimento.
+Site para clientes da Barbearia do Fortão (Av. Tancredo de Almeida Neves, 1463, Cohab 5, Carapicuíba - SP) marcarem corte e serviços de cabelo sem fila, com confirmação e lembrete por e-mail e avisos na própria conta. O pagamento é feito na barbearia. O Fortão usa o painel para tocar a agenda, mudar preços e serviços e ver o rendimento.
 
 Sucesso é: cliente marca em poucos toques, não esquece o horário, o Fortão nunca recebe dois clientes no mesmo horário e sabe quanto entrou no mês.
 
@@ -15,6 +15,7 @@ Sucesso é: cliente marca em poucos toques, não esquece o horário, o Fortão n
 | --- | --- |
 | Site hospedado, não mais app | PWA, service worker, notificação push e pacote da Play Store saíram. Avisos ficam no sino do site e no e-mail |
 | Imagens (13/10) | Banner enviado pela barbearia no topo da página inicial (inteiro, sem cortar o letreiro; o emblema "V" foi apagado e o fundo redesenhado) e ilustração do corte como capa de /agendar. WebP em 3 tamanhos e JPG de reserva. O banner também é a imagem de compartilhamento (1200×630). Ilustrações em SVG continuam na tela de entrar e na seção do Fortão |
+| Endereço no Google Maps (14/10) | Av. Tancredo de Almeida Neves, 1463, Cohab 5, Carapicuíba - SP. Links oficiais do Google Maps sem chave de API: busca (abrir), rota (dir) e mapa embutido depois do toque. Migração 005 preenche o endereço só se ainda estiver vazio. Campo opcional "Link do Google Maps" no painel (só aceita links do Google Maps) |
 | Animação de boas-vindas | Cadastro: "Bem-vindo ao seu lar, nome". Login (senha ou biometria): "Fortaleça sua autoestima novamente, nome". Só para clientes, na página seguinte, 3,6 s, pula com um toque ou Esc, sem movimento para quem pede movimento reduzido |
 | Sem sistema de pagamento | Preço aparece antes de confirmar; pagamento na barbearia |
 | Fortão altera preços e serviços | Painel > Serviços: criar, editar nome, preço, duração e descrição, esconder ou remover |

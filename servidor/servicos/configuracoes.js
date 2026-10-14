@@ -34,3 +34,12 @@ export function enderecoCompleto(negocio) {
   const partes = [negocio.endereco, negocio.bairro, `${negocio.cidade} - ${negocio.uf}`].filter(Boolean);
   return partes.join(', ');
 }
+
+// Google Maps (links oficiais, sem chave de API). A busca usa rua, número e cidade: o bairro às vezes confunde o mapa.
+const buscaMapa = (n) => encodeURIComponent([n.endereco, n.cidade && `${n.cidade} - ${n.uf}`].filter(Boolean).join(', '));
+
+/** Abre a barbearia no Google Maps: o link que o Fortão colou no painel ou a busca pelo endereço. */
+export const linkMapa = (n) => n.mapa_link || `https://www.google.com/maps/search/?api=1&query=${buscaMapa(n)}`;
+
+/** Rota até a barbearia, saindo de onde o cliente está. */
+export const linkRota = (n) => `https://www.google.com/maps/dir/?api=1&destination=${buscaMapa(n)}`;

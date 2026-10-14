@@ -5,7 +5,7 @@ import { consulta, umaLinha } from '../db/index.js';
 import * as modelos from '../emails/modelos.js';
 import { enfileirarEmail, acordarEntregador } from '../emails/fila.js';
 import { descreverDataHora, reais } from '../lib/tempo.js';
-import { enderecoCompleto, lerConfiguracoes } from './configuracoes.js';
+import { enderecoCompleto, lerConfiguracoes, linkRota } from './configuracoes.js';
 
 export async function criarAviso(conn, { usuarioId, tipo, titulo, corpo, link = null }) {
   if (!usuarioId) return;
@@ -33,7 +33,7 @@ export async function aoAgendar(conn, ag) {
   const valor = reais(ag.preco_centavos);
   const cliente = await emailDoCliente(conn, ag.cliente_id);
   if (cliente) {
-    const m = modelos.agendamentoConfirmado({ nome: cliente.nome, servico: ag.servico_nome, quando, valor, endereco, codigo: ag.codigo });
+    const m = modelos.agendamentoConfirmado({ nome: cliente.nome, servico: ag.servico_nome, quando, valor, endereco, rota: linkRota(negocio), codigo: ag.codigo });
     await enfileirarEmail(conn, { para: cliente.email, ...m, anexos: [modelos.convite({ codigo: ag.codigo, servico: ag.servico_nome, inicio: ag.inicio, fim: ag.fim, endereco })] });
     await criarAviso(conn, { usuarioId: ag.cliente_id, tipo: 'agendado', titulo: 'Horário confirmado', corpo: `${ag.servico_nome}, ${quando}.`, link: '/conta' });
   }
@@ -55,7 +55,7 @@ export async function aoRemarcar(conn, ag, inicioAnterior) {
   const anterior = descreverDataHora(inicioAnterior);
   const cliente = await emailDoCliente(conn, ag.cliente_id);
   if (cliente) {
-    const m = modelos.agendamentoRemarcado({ nome: cliente.nome, servico: ag.servico_nome, quando, anterior, endereco, codigo: ag.codigo });
+    const m = modelos.agendamentoRemarcado({ nome: cliente.nome, servico: ag.servico_nome, quando, anterior, endereco, rota: linkRota(negocio), codigo: ag.codigo });
     await enfileirarEmail(conn, { para: cliente.email, ...m, anexos: [modelos.convite({ codigo: ag.codigo, servico: ag.servico_nome, inicio: ag.inicio, fim: ag.fim, endereco })] });
     await criarAviso(conn, { usuarioId: ag.cliente_id, tipo: 'remarcado', titulo: 'Horário remarcado', corpo: `${ag.servico_nome}, agora ${quando}.`, link: '/conta' });
   }
@@ -88,7 +88,7 @@ export async function aoLembrar(conn, ag, tipo) {
   if (!cliente) return;
   const { negocio } = await lerConfiguracoes();
   const quando = descreverDataHora(ag.inicio);
-  const m = modelos.lembrete({ nome: cliente.nome, servico: ag.servico_nome, quando, endereco: enderecoCompleto(negocio), tipo, codigo: ag.codigo });
+  const m = modelos.lembrete({ nome: cliente.nome, servico: ag.servico_nome, quando, endereco: enderecoCompleto(negocio), rota: linkRota(negocio), tipo, codigo: ag.codigo });
   await enfileirarEmail(conn, { para: cliente.email, ...m });
   const titulo = tipo === '2h' ? 'Daqui a pouco é a sua vez' : 'Amanhã tem corte';
   const corpo = `${ag.servico_nome}, ${quando}.`;

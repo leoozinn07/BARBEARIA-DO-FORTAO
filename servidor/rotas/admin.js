@@ -384,6 +384,11 @@ const esquemaConfig = z.object({
   negocio: z.object({
     nome: z.string().trim().min(2).max(80),
     endereco: z.string().trim().max(160),
+    // Só links do Google Maps (vão para um href no site e nos e-mails)
+    mapa_link: z.union([z.literal(''), z.string().trim().max(300).regex(
+      /^https:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|g\.page|maps\.google\.com(\.br)?|(www\.)?google\.com(\.br)?\/maps)([/?]|$)/,
+      'Cole o link do Google Maps (botão Compartilhar do mapa).',
+    )]),
     bairro: z.string().trim().max(80),
     cidade: z.string().trim().max(80),
     uf: z.string().trim().length(2).toUpperCase(),

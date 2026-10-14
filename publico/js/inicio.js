@@ -3,6 +3,7 @@ import { get } from './api.js';
 import { iniciarCasca, obterConfig } from './casca.js';
 import { montarAgendamento, pacote } from './agendamento.js';
 import { marcarComConfirmacao } from './confirmar.js';
+import { enderecoTexto, linkMapa, linkMapaEmbutido, linkRota } from './mapa.js';
 import { abrirFolha, dataCurta, h, primeiroNome, quando, reais } from './ui.js';
 
 const $ = (s) => document.querySelector(s);
@@ -74,11 +75,13 @@ $('[data-outra-frase]').addEventListener('click', () => {
 obterConfig().then((cfg) => {
   if (!cfg) return;
   const n = cfg.negocio;
-  const endereco = [n.endereco, n.bairro, `${n.cidade} - ${n.uf}`].filter(Boolean).join(', ');
-  if (n.endereco) {
-    $('[data-endereco]').textContent = endereco;
-    $('[data-rota]').href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`;
-  }
+  // Endereço, "Abrir no Google Maps" e "Traçar rota" sempre a partir do que está no painel
+  const endereco = $('[data-endereco]');
+  endereco.textContent = enderecoTexto(n);
+  endereco.href = linkMapa(n);
+  $('[data-onde-titulo]').textContent = [n.bairro, n.cidade].filter(Boolean).join(', ') || 'Onde fica';
+  $('[data-rota]').href = linkRota(n);
+  $('[data-abrir-mapa]').href = linkMapa(n);
   if (n.whatsapp) {
     const w = $('[data-whatsapp]');
     w.href = `https://wa.me/${n.whatsapp.startsWith('55') ? '' : '55'}${n.whatsapp}?text=${encodeURIComponent('Fala, Fortão! Vim pelo site.')}`;
@@ -98,8 +101,7 @@ obterConfig().then((cfg) => {
   }));
   const mapa = $('[data-mapa]');
   mapa.querySelector('button').addEventListener('click', () => {
-    const q = encodeURIComponent(n.endereco ? endereco : 'Cohab 5, São Paulo');
-    mapa.replaceChildren(h('iframe', { title: 'Mapa da Barbearia do Fortão', loading: 'lazy', referrerpolicy: 'no-referrer-when-downgrade', src: `https://www.google.com/maps?q=${q}&output=embed` }));
+    mapa.replaceChildren(h('iframe', { title: `Mapa: ${enderecoTexto(n)}`, loading: 'lazy', referrerpolicy: 'no-referrer-when-downgrade', src: linkMapaEmbutido(n) }));
   });
 });
 

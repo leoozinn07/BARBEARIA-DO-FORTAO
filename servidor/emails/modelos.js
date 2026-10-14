@@ -50,6 +50,11 @@ function layout({ titulo, previa, corpo, endereco = '' }) {
 
 const p = (texto) => `<p style="margin:0 0 12px;font:16px/1.55 Arial,Helvetica,sans-serif;color:#2b2b30">${texto}</p>`;
 const primeiroNome = (nome) => String(nome || '').trim().split(/\s+/)[0] || 'cliente';
+const ENDERECO_PADRAO = 'Av. Tancredo de Almeida Neves, 1463, Cohab 5, Carapicuíba - SP';
+/** Link "Como chegar" para o Google Maps, logo abaixo do endereço. */
+const comoChegar = (rota) => (rota
+  ? `<p style="margin:0 0 16px;font:600 15px Arial,Helvetica,sans-serif"><a href="${esc(rota)}" style="color:#111112">Como chegar pelo Google Maps &rarr;</a></p>`
+  : '');
 
 // ---------------------------------------------------------------------------
 
@@ -100,24 +105,26 @@ export function biometriaAtivada({ nome, aparelho = 'aparelho' }) {
   };
 }
 
-export function agendamentoConfirmado({ nome, servico, quando, valor, endereco, codigo }) {
+export function agendamentoConfirmado({ nome, servico, quando, valor, endereco, rota, codigo }) {
   return {
     assunto: `Horário confirmado: ${quando}`,
     html: layout({ titulo: 'Horário confirmado', previa: `${servico}, ${quando}.`, endereco, corpo:
       p(`Fechou, ${esc(primeiroNome(nome))}! Seu horário está garantido.`) +
-      detalhes([['Serviço', servico], ['Quando', quando], ['Valor', `${valor} (pago na barbearia)`], ['Onde', endereco || 'Cohab 5, São Paulo - SP'], ['Código', codigo]]) +
+      detalhes([['Serviço', servico], ['Quando', quando], ['Valor', `${valor} (pago na barbearia)`], ['Onde', endereco || ENDERECO_PADRAO], ['Código', codigo]]) +
+      comoChegar(rota) +
       p('Vamos te lembrar 24 horas e 2 horas antes. O convite em anexo coloca o horário na sua agenda do celular.') +
       botao('Ver meus horários', `${config.appUrl}/conta`) }),
-    texto: `Horário confirmado!\n${servico}\n${quando}\nValor: ${valor} (pago na barbearia)\nOnde: ${endereco}\nCódigo: ${codigo}\n\nVer meus horários: ${config.appUrl}/conta`,
+    texto: `Horário confirmado!\n${servico}\n${quando}\nValor: ${valor} (pago na barbearia)\nOnde: ${endereco}${rota ? `\nComo chegar: ${rota}` : ''}\nCódigo: ${codigo}\n\nVer meus horários: ${config.appUrl}/conta`,
   };
 }
 
-export function agendamentoRemarcado({ nome, servico, quando, anterior, endereco, codigo }) {
+export function agendamentoRemarcado({ nome, servico, quando, anterior, endereco, rota, codigo }) {
   return {
     assunto: `Horário remarcado: ${quando}`,
     html: layout({ titulo: 'Horário remarcado', previa: `Novo horário: ${quando}.`, endereco, corpo:
       p(`Pronto, ${esc(primeiroNome(nome))}. Seu horário mudou.`) +
       detalhes([['Serviço', servico], ['Novo horário', quando], ['Antes era', anterior], ['Código', codigo]]) +
+      comoChegar(rota) +
       botao('Ver meus horários', `${config.appUrl}/conta`) }),
     texto: `Horário remarcado.\n${servico}\nNovo horário: ${quando}\nAntes era: ${anterior}\nCódigo: ${codigo}`,
   };
@@ -136,16 +143,17 @@ export function agendamentoCancelado({ nome, servico, quando, motivo, porAdmin }
   };
 }
 
-export function lembrete({ nome, servico, quando, endereco, tipo, codigo }) {
+export function lembrete({ nome, servico, quando, endereco, rota, tipo, codigo }) {
   const chamada = tipo === '2h' ? 'Daqui a pouco é a sua vez' : 'Amanhã tem corte';
   return {
     assunto: `${chamada}: ${quando}`,
     html: layout({ titulo: chamada, previa: `${servico}, ${quando}.`, endereco, corpo:
       p(`${esc(primeiroNome(nome))}, passando para lembrar do seu horário.`) +
-      detalhes([['Serviço', servico], ['Quando', quando], ['Onde', endereco || 'Cohab 5, São Paulo - SP'], ['Código', codigo]]) +
+      detalhes([['Serviço', servico], ['Quando', quando], ['Onde', endereco || ENDERECO_PADRAO], ['Código', codigo]]) +
+      comoChegar(rota) +
       p('Não vai dar? Cancele ou remarque pelo site para liberar a cadeira para outra pessoa.') +
       botao('Ver meu horário', `${config.appUrl}/conta`) }),
-    texto: `${chamada}!\n${servico}\n${quando}\nOnde: ${endereco}\nCódigo: ${codigo}\n\nNão vai dar? Cancele ou remarque: ${config.appUrl}/conta`,
+    texto: `${chamada}!\n${servico}\n${quando}\nOnde: ${endereco}${rota ? `\nComo chegar: ${rota}` : ''}\nCódigo: ${codigo}\n\nNão vai dar? Cancele ou remarque: ${config.appUrl}/conta`,
   };
 }
 
@@ -191,7 +199,7 @@ export function convite({ codigo, servico, inicio, fim, endereco }) {
     `DTSTART:${paraIcs(inicio)}`,
     `DTEND:${paraIcs(fim)}`,
     `SUMMARY:${limpar(`${servico} na Barbearia do Fortão`)}`,
-    `LOCATION:${limpar(endereco || 'Cohab 5, São Paulo - SP')}`,
+    `LOCATION:${limpar(endereco || ENDERECO_PADRAO)}`,
     `DESCRIPTION:${limpar(`Código ${codigo}. Cancele ou remarque em ${config.appUrl}/conta`)}`,
     'BEGIN:VALARM', 'TRIGGER:-PT1H', 'ACTION:DISPLAY', 'DESCRIPTION:Corte na Barbearia do Fortão', 'END:VALARM',
     'END:VEVENT', 'END:VCALENDAR',

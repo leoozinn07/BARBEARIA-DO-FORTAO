@@ -1,6 +1,6 @@
 # Barbearia do Fortão
 
-Site de agendamento da Barbearia do Fortão, na Cohab 5 (São Paulo). O cliente marca corte e serviços de cabelo pelo site e paga na barbearia. O Fortão tem um painel para tocar a agenda, mudar preços e serviços e ver o rendimento. Feito em HTML, CSS e JavaScript, com Node e MySQL.
+Site de agendamento da Barbearia do Fortão, na Av. Tancredo de Almeida Neves, 1463, Cohab 5, Carapicuíba - SP. O cliente marca corte e serviços de cabelo pelo site e paga na barbearia. O Fortão tem um painel para tocar a agenda, mudar preços e serviços e ver o rendimento. Feito em HTML, CSS e JavaScript, com Node e MySQL.
 
 ![Telas do site](docs/previas/visao-geral.jpg)
 
@@ -14,6 +14,7 @@ Site de agendamento da Barbearia do Fortão, na Cohab 5 (São Paulo). O cliente 
 - **Fortão (admin):** agenda do dia com concluir, falta, remarcar e cancelar; botão **Mensagem** em cada horário e em cada cliente, que abre o WhatsApp dele com o texto pronto (lembrete, confirmar presença, remarcado, cancelado ou livre), e **Salvar contato**, que põe o cliente na agenda do celular; marca cliente do WhatsApp ou do balcão (com adicionais); fecha a agenda em folgas; cria, edita, esconde e remove serviços e adicionais com preço e tempo; muda horário de funcionamento e dados da barbearia; busca clientes.
 - **Rendimento:** quanto entrou (horários concluídos), quanto ainda vai entrar (confirmados), atendimentos, ticket médio e faltas, com gráfico por dia ou por mês, divisão por serviço e por adicional, tabela e comparação com o período anterior.
 - **Sem pagamento online:** o preço aparece antes de confirmar e é pago na barbearia.
+- **Onde fica, no Google Maps:** a página inicial mostra o endereço com o mapa do Google (carrega só depois do toque), "Traçar rota" e "Abrir no Google Maps". O cartão do horário, a folha de lembrete, o rodapé e os e-mails de confirmação e lembrete trazem "Como chegar". O endereço vem do painel (aba Barbearia), onde também dá para colar o link do Google Maps da barbearia.
 - **Visual:** preto e cinza, botão de tema claro e escuro no topo de todas as páginas e dourado só em detalhes. O banner da barbearia abre a página inicial e a ilustração do corte é a capa da página de marcar. Ao tocar em qualquer botão ou caixa, aparece um contorno dourado.
 - **Boas-vindas:** ao criar a conta, o cliente vê a animação "Bem-vindo ao seu lar, *nome*"; quando entra de novo (com senha ou biometria), "Fortaleça sua autoestima novamente, *nome*". Um toque pula, e quem pede menos movimento no celular vê só o texto.
 - **Segurança:** senha com argon2id, sessão em cookie HttpOnly, proteção CSRF, limite de tentativas, bloqueio da conta após 8 senhas erradas, CSP sem script inline, MySQL fechado para a internet no Docker, biometria que pede a senha (ou um login recente) para ser ativada e avisa por e-mail, e nenhum horário duplicado mesmo com pedidos simultâneos.

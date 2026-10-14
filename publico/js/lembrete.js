@@ -1,12 +1,10 @@
 // Lembrete do horário: arquivo de agenda (.ics, abre no app de agenda do celular), Google Agenda e o aviso do e-mail.
+import { enderecoTexto, linkRota } from './mapa.js';
 import { h, icone } from './ui.js';
 
 const utc = (iso) => new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 
-function endereco(config) {
-  const n = config?.negocio;
-  return n ? [n.endereco, n.bairro, `${n.cidade} - ${n.uf}`].filter(Boolean).join(', ') : 'Cohab 5, São Paulo - SP';
-}
+const endereco = (config) => enderecoTexto(config?.negocio);
 
 /** Link para baixar o .ics, com alarme 1 h antes. */
 export function linkAgendaCelular(ag, config) {
@@ -38,6 +36,7 @@ export function acoesLembrete(ag, config, email) {
       h('a', { class: 'botao botao--suave', href: linkAgendaCelular(ag, config), download: `fortao-${ag.codigo}.ics` }, icone('calendar-plus'), 'Agenda do celular'),
       h('a', { class: 'botao botao--suave', href: linkGoogleAgenda(ag, config), target: '_blank', rel: 'noopener' }, icone('google-logo'), 'Google Agenda'),
     ),
+    h('a', { class: 'botao botao--suave lembrete__rota', href: linkRota(config?.negocio), target: '_blank', rel: 'noopener' }, icone('navigation-arrow'), 'Como chegar (Google Maps)'),
     h('p', { class: 'lembrete__aviso' }, icone('envelope-simple'),
       h('span', {}, 'Lembrete por e-mail', email ? [' em ', h('b', {}, email)] : '', ': 1 dia antes e 2 horas antes.')),
   );
