@@ -2,6 +2,8 @@
 
 Site de agendamento da Barbearia do Fortão, na Av. Tancredo de Almeida Neves, 1463, Cohab 5, Carapicuíba - SP. O cliente marca corte e serviços de cabelo pelo site e paga na barbearia. O Fortão tem um painel para tocar a agenda, mudar preços e serviços e ver o rendimento. Feito em HTML, CSS e JavaScript, com Node e MySQL.
 
+[![Verificação](https://github.com/leoozinn07/BARBEARIA-DO-FORTAO/actions/workflows/verificacao.yml/badge.svg)](https://github.com/leoozinn07/BARBEARIA-DO-FORTAO/actions/workflows/verificacao.yml)
+
 ![Telas do site](docs/previas/visao-geral.jpg)
 
 <sub>Prévias tiradas de um banco local com horários de exemplo. Um banco novo começa vazio, só com os serviços e os horários de funcionamento.</sub>
@@ -100,6 +102,13 @@ As tabelas são criadas sozinhas na primeira vez. Sem a chave do Brevo, os e-mai
 
 Para conferir o código: `npm run lint`.
 
+## No GitHub
+
+- **`main`** é a versão do site. Mudanças entram por pull request.
+- **Verificação** (aba Actions) roda a cada mudança: código, o site subindo com MySQL e a imagem Docker.
+- **Publicar no servidor** atualiza o site sozinho quando a Verificação passa na `main`, depois que o servidor é cadastrado nos segredos do repositório ([docs/deploy.md](docs/deploy.md), seção 8).
+- Senhas e chaves (`.env`, Brevo, SSH) nunca vão para o repositório: ficam no servidor e nos segredos do GitHub.
+
 ## Estrutura
 
 ```
@@ -113,6 +122,7 @@ servidor/
   partes/                cabeçalho, abas e rodapé compartilhados
 publico/                 páginas HTML, CSS, JS, fontes, ícones e ilustrações
 scripts/                 criar o admin
+.github/workflows/       verificação e publicação automáticas (GitHub Actions)
 docs/                    especificação, deploy, melhorias, prévias
 ```
 

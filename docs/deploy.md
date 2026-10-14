@@ -16,10 +16,22 @@ No painel do domínio, crie um registro **A** apontando `barbeariadofortao.com.b
 
 ## 3. Servidor
 
+O repositório no GitHub é privado: o servidor precisa de uma **chave de leitura** (deploy key) para baixar o código.
+
 ```bash
 # No servidor (Ubuntu), uma vez
 curl -fsSL https://get.docker.com | sh
-git clone https://github.com/leoozinn07/BARBEARIA-DO-FORTAO.git
+
+# Chave só de leitura para o servidor baixar o código do GitHub
+ssh-keygen -t ed25519 -f ~/.ssh/github_fortao -N "" -C "servidor-barbearia"
+printf 'Host github.com\n  IdentityFile ~/.ssh/github_fortao\n  IdentitiesOnly yes\n' >> ~/.ssh/config
+cat ~/.ssh/github_fortao.pub
+```
+
+Copie a linha que aparecer e cole no GitHub em **Settings > Deploy keys > Add deploy key** do repositório (deixe *Allow write access* desmarcado). Depois:
+
+```bash
+git clone git@github.com:leoozinn07/BARBEARIA-DO-FORTAO.git
 cd BARBEARIA-DO-FORTAO
 cp .env.example .env
 nano .env
@@ -91,7 +103,36 @@ docker compose exec -T banco sh -c 'mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --
 
 Guarde as cópias fora do servidor (Google Drive, outro provedor).
 
-## 8. Atualizar o site
+## 8. Atualizar o site (sozinho, pelo GitHub)
+
+O repositório tem duas automações (GitHub Actions, aba **Actions**):
+
+- **Verificação:** a cada mudança, confere o código, sobe o site com um MySQL de verdade (tabelas, catálogo, páginas e conta do Fortão) e monta a imagem Docker. Se algo quebrar, o GitHub avisa por e-mail e nada vai para o ar.
+- **Publicar no servidor:** quando a Verificação passa na `main`, entra no servidor, baixa o código novo e reinicia o site. Fica desligada até você cadastrar o servidor:
+
+1. No servidor, crie a chave que o GitHub vai usar para entrar:
+
+   ```bash
+   ssh-keygen -t ed25519 -f ~/.ssh/github_actions -N "" -C "github-actions"
+   cat ~/.ssh/github_actions.pub >> ~/.ssh/authorized_keys
+   cat ~/.ssh/github_actions          # copie tudo, inclusive as linhas BEGIN e END
+   ssh-keyscan -H IP-DO-SERVIDOR      # opcional: identidade do servidor, para VPS_KNOWN_HOSTS
+   ```
+
+2. No GitHub, em **Settings > Secrets and variables > Actions > New repository secret**, crie:
+
+   | Segredo | O que colocar |
+   | --- | --- |
+   | `VPS_HOST` | IP do servidor |
+   | `VPS_USUARIO` | usuário do servidor (por exemplo, `root`) |
+   | `VPS_CHAVE_SSH` | a chave copiada no passo 1 |
+   | `VPS_PASTA` | opcional: pasta do site, se não for `BARBEARIA-DO-FORTAO` na pasta do usuário |
+   | `VPS_PORTA` | opcional: porta do SSH, se não for 22 |
+   | `VPS_KNOWN_HOSTS` | opcional: a saída do `ssh-keyscan` do passo 1, para o GitHub conferir que é mesmo o seu servidor |
+
+3. Pronto: cada mudança que entrar na `main` aparece no site em poucos minutos. Para publicar na hora, abra **Actions > Publicar no servidor > Run workflow**.
+
+Sem o GitHub Actions, dá para atualizar à mão no servidor:
 
 ```bash
 git pull

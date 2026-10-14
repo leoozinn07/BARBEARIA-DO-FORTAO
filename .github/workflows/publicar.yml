@@ -1,0 +1,51 @@
+# Publica o site no servidor depois que a Verificação passa na main.
+# Fica desligado até os segredos VPS_HOST, VPS_USUARIO e VPS_CHAVE_SSH existirem (docs/deploy.md, seção 8).
+name: Publicar no servidor
+
+on:
+  workflow_run:
+    workflows: [Verificação]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publicar
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Servidor cadastrado?
+        id: confere
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          if [ -z "$VPS_HOST" ]; then
+            echo "::notice::Publicação automática desligada: cadastre os segredos VPS_HOST, VPS_USUARIO e VPS_CHAVE_SSH (docs/deploy.md, seção 8)."
+            echo "ligado=nao" >> "$GITHUB_OUTPUT"
+          else
+            echo "ligado=sim" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Atualiza o site no servidor
+        if: steps.confere.outputs.ligado == 'sim'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USUARIO: ${{ secrets.VPS_USUARIO }}
+          VPS_CHAVE_SSH: ${{ secrets.VPS_CHAVE_SSH }}
+          VPS_PORTA: ${{ secrets.VPS_PORTA }}
+          VPS_PASTA: ${{ secrets.VPS_PASTA }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$VPS_CHAVE_SSH" > ~/.ssh/chave && chmod 600 ~/.ssh/chave
+          # Com VPS_KNOWN_HOSTS, a identidade do servidor é conferida; sem ele, é aceita na primeira conexão
+          if [ -n "$VPS_KNOWN_HOSTS" ]; then printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else ssh-keyscan -p "${VPS_PORTA:-22}" -H "$VPS_HOST" > ~/.ssh/known_hosts 2>/dev/null; fi
+          ssh -i ~/.ssh/chave -p "${VPS_PORTA:-22}" "$VPS_USUARIO@$VPS_HOST" \
+            "cd '${VPS_PASTA:-BARBEARIA-DO-FORTAO}' && git pull --ff-only origin main && docker compose up -d --build && docker image prune -f"

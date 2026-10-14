@@ -1,0 +1,82 @@
+# Confere cada mudança antes de ela ir para o site: código, o site subindo com um MySQL de verdade e a imagem Docker.
+name: Verificação
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verificacao-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  codigo:
+    name: Código
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  site:
+    name: Site sobe com MySQL
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: raiz-so-para-verificacao
+          MYSQL_DATABASE: fortao
+          MYSQL_USER: fortao
+          MYSQL_PASSWORD: senha-so-para-verificacao
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -u root -praiz-so-para-verificacao"
+          --health-interval=5s --health-timeout=5s --health-retries=24
+    env:
+      NODE_ENV: development
+      APP_URL: http://localhost:3000
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_PORTA: 3306
+      MYSQL_USUARIO: fortao
+      MYSQL_SENHA: senha-so-para-verificacao
+      MYSQL_BANCO: fortao
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Sobe o site (cria as tabelas e o catálogo sozinho)
+        run: |
+          node servidor/index.js > servidor.log 2>&1 &
+          for i in $(seq 1 40); do curl -fsS http://localhost:3000/api/saude > /dev/null && break; sleep 1; done
+          curl -fsS http://localhost:3000/api/config | grep -q 'Tancredo de Almeida Neves'
+          curl -fsS http://localhost:3000/api/servicos | grep -q 'corte-navalhado'
+      - name: Páginas respondem
+        run: |
+          for pagina in / /agendar /entrar /cadastro /termos /privacidade /lgpd; do
+            curl -fsS -o /dev/null "http://localhost:3000$pagina" || { echo "Falhou: $pagina"; exit 1; }
+          done
+      - name: Conta do Fortão pode ser criada
+        run: node scripts/criar-admin.js --email fortao@exemplo.com --nome "Fortão" --senha "Navalha#Cohab2026"
+      - name: Log do servidor
+        if: failure()
+        run: cat servidor.log
+
+  docker:
+    name: Imagem Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t barbearia-do-fortao .
