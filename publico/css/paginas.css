@@ -1,0 +1,106 @@
+/* Páginas internas: marcar horário, contas, minha conta, páginas legais. */
+.pagina { padding-top: 12px; display: grid; gap: 22px; }
+.pagina__cabeca { display: grid; gap: 8px; }
+
+/* ---------------------------------------------------------------- entrar / criar conta */
+.auth { min-height: calc(100dvh - var(--topo-h)); display: grid; align-content: start; gap: 24px; padding-top: 12px; }
+.auth__foto { display: none; }
+.auth__caixa { display: grid; gap: 20px; width: 100%; max-width: 440px; }
+.auth__caixa form { display: grid; gap: 16px; }
+.auth__troca { color: var(--texto-2); }
+.auth__legal { color: var(--texto-2); font-size: 0.8125rem; }
+.biometria-entrar { display: grid; gap: 12px; }
+.biometria-entrar .ajuda { font-size: 0.8125rem; color: var(--texto-2); text-align: center; text-wrap: balance; }
+.separador { display: flex; align-items: center; gap: 12px; color: var(--texto-2); font-size: 0.8125rem; }
+.separador::before, .separador::after { content: ''; flex: 1; height: 1px; background: var(--borda); }
+.auth__marca { width: 56px; }
+.forca { display: flex; gap: 4px; }
+.forca span { flex: 1; height: 4px; border-radius: 4px; background: var(--sup-3); transition: background-color 200ms ease; }
+.forca[data-nivel="1"] span:nth-child(-n+1), .forca[data-nivel="2"] span:nth-child(-n+2), .forca[data-nivel="3"] span:nth-child(-n+3), .forca[data-nivel="4"] span { background: var(--texto); }
+.resultado { display: grid; gap: 14px; justify-items: start; }
+
+@media (min-width: 900px) {
+  .auth { grid-template-columns: 1fr 1fr; align-items: center; gap: 56px; max-width: var(--largura); margin: 0 auto; padding: 24px var(--gutter); }
+  .auth__foto { display: grid; position: relative; height: min(78dvh, 720px); border-radius: var(--raio); overflow: hidden; align-items: end; }
+  .auth__foto { background: #111; }
+  .auth__foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; }
+  .auth__foto::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 50%, rgb(11 11 12 / 0.9)); }
+  .auth__foto p { position: relative; z-index: 1; padding: 28px; font-size: 2rem; font-weight: 700; letter-spacing: -0.04em; line-height: 1.05; color: #f2f2f3; }
+}
+
+/* ---------------------------------------------------------------- minha conta */
+.segmentos { position: sticky; top: calc(var(--topo-h) + env(safe-area-inset-top)); z-index: 30; display: flex; gap: 4px; padding: 4px; margin: 0 calc(var(--gutter) * -1); padding-inline: var(--gutter); background: var(--fundo); overflow-x: auto; scrollbar-width: none; }
+.segmentos a { flex: 1 0 auto; text-align: center; padding: 10px 14px; border-radius: 999px; font-size: 0.875rem; font-weight: 600; color: var(--texto-2); text-decoration: none; background: var(--sup); transition: background-color 200ms ease, color 200ms ease; }
+.segmentos a[aria-current="true"] { background: var(--ativo-bg); color: var(--ativo-fg); }
+.painel { display: grid; gap: 18px; }
+.painel[hidden] { display: none; }
+.horario { display: grid; gap: 14px; padding: 18px; border-radius: var(--raio); background: var(--sup); border: 1px solid var(--borda); }
+.horario__topo { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+.horario__data { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.035em; line-height: 1.1; }
+.horario__data small { display: block; font-size: 0.9375rem; font-weight: 500; letter-spacing: 0; color: var(--texto-2); margin-top: 4px; }
+.horario__info { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--texto-2); font-size: 0.875rem; }
+.horario__info span { display: inline-flex; align-items: center; gap: 6px; }
+.horario__acoes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.horario__acoes .botao { min-height: 46px; }
+.horario__nota { font-size: 0.8125rem; color: var(--texto-2); }
+.historico { display: grid; }
+.historico li { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 14px 0; border-top: 1px solid var(--borda); font-size: 0.9375rem; }
+.historico li:last-child { border-bottom: 1px solid var(--borda); }
+.historico small { color: var(--texto-2); grid-column: 1; }
+.historico .selo { grid-row: 1 / span 2; grid-column: 2; align-self: center; }
+.grupo-form { display: grid; gap: 16px; padding: 20px; border-radius: var(--raio); background: var(--sup); border: 1px solid var(--borda); }
+.grupo-form h2 { font-size: 1.125rem; font-weight: 650; letter-spacing: -0.02em; }
+
+/* Aparelhos com biometria ativada */
+.aparelhos { display: grid; gap: 8px; }
+.aparelhos li { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 10px 6px 10px 14px; border-radius: var(--raio-campo); background: var(--sup-2); }
+.aparelhos li > i { font-size: 1.4rem; color: var(--ouro); }
+.aparelhos b { display: block; font-weight: 600; }
+.aparelhos small { display: block; color: var(--texto-2); font-size: 0.8125rem; }
+.alerta__acoes { display: inline-flex; flex-wrap: wrap; gap: 4px 16px; margin-left: 4px; }
+.link--suave { color: var(--texto-2); }
+.alerta--sugestao i { color: var(--ouro); }
+.opcoes-tema { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.opcoes-tema label { position: relative; cursor: pointer; }
+.opcoes-tema input { position: absolute; opacity: 0; }
+.opcoes-tema span { display: grid; place-items: center; gap: 4px; padding: 12px 6px; border-radius: var(--raio-campo); background: var(--sup-2); font-size: 0.8125rem; font-weight: 600; transition: background-color 200ms ease, color 200ms ease; }
+.opcoes-tema i { font-size: 1.25rem; }
+.opcoes-tema input:checked + span { background: var(--ativo-bg); color: var(--ativo-fg); }
+.opcoes-tema input:focus-visible + span { outline: 2px solid var(--foco); outline-offset: 2px; }
+.linha-acao { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.linha-acao p { color: var(--texto-2); font-size: 0.875rem; }
+
+/* ---------------------------------------------------------------- textos legais */
+.legal { max-width: 70ch; display: grid; gap: 14px; padding-top: 12px; }
+.legal h1 { margin-bottom: 4px; }
+.legal h2 { font-size: 1.25rem; font-weight: 650; letter-spacing: -0.02em; margin-top: 18px; }
+.legal p, .legal li { color: var(--texto-2); }
+.legal ul { list-style: disc; padding-left: 1.25rem; display: grid; gap: 6px; }
+.legal strong { color: var(--texto); font-weight: 600; }
+.legal .atualizado { font-size: 0.875rem; }
+.legal table { border-collapse: collapse; width: 100%; font-size: 0.875rem; }
+.legal th, .legal td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--borda); vertical-align: top; }
+.legal th { color: var(--texto); font-weight: 600; }
+.legal td { color: var(--texto-2); }
+
+/* Capa da página de marcar: ilustração do corte com o título por cima (escura nos dois temas) */
+.agendar-capa { position: relative; overflow: hidden; isolation: isolate; display: grid; align-items: end; aspect-ratio: 1 / 1; border-radius: var(--raio); background: #0b0b0c; box-shadow: var(--sombra); }
+/* Cada camada com o próprio arredondado: a foto animada vira uma camada à parte e escaparia do recorte do cartão */
+.agendar-capa__foto { position: absolute; inset: 0; z-index: -2; overflow: hidden; border-radius: inherit; }
+.agendar-capa__foto img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 36%; }
+.agendar-capa::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: linear-gradient(180deg, rgb(11 11 12 / 0) 38%, rgb(11 11 12 / 0.82) 70%, #0b0b0c 100%); }
+.agendar-capa__texto { display: grid; gap: 8px; padding: 20px; color: #f2f2f3; }
+.agendar-capa .subtitulo { color: #d6d6da; max-width: 40ch; }
+@media (prefers-reduced-motion: no-preference) {
+  .js .agendar-capa__foto img { animation: capa-aproximar 1600ms var(--ease-out) both; }
+}
+@keyframes capa-aproximar { from { transform: scale(1.07); } to { transform: none; } }
+
+@media (min-width: 900px) {
+  .pagina { max-width: 760px; }
+  /* No computador, a capa fica parada à esquerda enquanto o cliente escolhe à direita */
+  .pagina--agendar { max-width: 1120px; grid-template-columns: minmax(300px, 400px) 1fr; column-gap: 32px; align-items: start; }
+  .pagina--agendar > * { grid-column: 2; }
+  .pagina--agendar > .agendar-capa { grid-column: 1; grid-row: 1 / span 3; position: sticky; top: calc(var(--topo-h) + 16px); aspect-ratio: 2 / 3; max-height: calc(100dvh - var(--topo-h) - 32px); }
+  .horario__acoes { grid-template-columns: repeat(4, auto); justify-content: start; }
+}

@@ -1,0 +1,10 @@
+# HTTPS automático. O Caddy pede e renova o certificado sozinho.
+{$DOMINIO} {
+	encode zstd gzip
+	reverse_proxy app:3000
+}
+
+# Um endereço só: a sessão, a proteção dos formulários e a biometria ficam presas ao domínio principal
+www.{$DOMINIO} {
+	redir https://{$DOMINIO}{uri} permanent
+}

@@ -1,0 +1,66 @@
+/* Componente de agendamento (serviço, dia, horário). */
+.ag { display: grid; gap: 22px; }
+.ag-grupo { display: grid; gap: 10px; }
+.ag-grupo legend { margin-bottom: 10px; }
+
+/* Linhas roláveis que sangram até a borda da tela no celular */
+.ag-servicos, .ag-dias { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x proximity; margin: 0 calc(var(--gutter) * -1); padding: 2px var(--gutter) 8px; scroll-padding-left: var(--gutter); scrollbar-width: none; overscroll-behavior-x: contain; }
+.ag-servicos::-webkit-scrollbar, .ag-dias::-webkit-scrollbar { display: none; }
+.ag input[type="radio"], .ag-hora input { position: absolute; opacity: 0; pointer-events: none; }
+
+.ag-servico { position: relative; flex: 0 0 auto; width: 164px; min-height: 116px; padding: 14px; border-radius: 18px; background: var(--sup); border: 1px solid var(--borda); display: grid; align-content: space-between; gap: 16px; cursor: pointer; scroll-snap-align: start; transition: transform 160ms var(--ease-out), background-color 200ms ease, color 200ms ease; }
+.ag-servico:active { transform: scale(0.97); }
+.ag-servico__nome { font-weight: 600; font-size: 0.9375rem; line-height: 1.25; }
+.ag-servico__info { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.ag-servico__info b { font-size: 1.625rem; font-weight: 700; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.ag-servico__info small { font-size: 0.8125rem; opacity: 0.7; }
+.ag-servico:has(input:checked) { background: var(--ativo-bg); color: var(--ativo-fg); border-color: transparent; box-shadow: inset 0 0 0 1.5px var(--ouro); }
+
+.ag-dia { position: relative; flex: 0 0 auto; width: 68px; padding: 10px 0 8px; border-radius: var(--raio-campo); background: var(--sup); border: 1px solid var(--borda); display: grid; justify-items: center; gap: 1px; cursor: pointer; scroll-snap-align: start; transition: transform 160ms var(--ease-out), background-color 200ms ease, color 200ms ease; }
+.ag-dia:active { transform: scale(0.96); }
+.ag-dia small { font-size: 0.75rem; color: var(--texto-2); }
+.ag-dia b { font-size: 1.25rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.ag-dia__info { font-size: 0.625rem; color: var(--texto-2); }
+.ag-dia:has(input:checked) { background: var(--ativo-bg); color: var(--ativo-fg); border-color: transparent; box-shadow: inset 0 0 0 1.5px var(--ouro); }
+.ag-dia:has(input:checked) small, .ag-dia:has(input:checked) .ag-dia__info { color: inherit; opacity: 0.75; }
+.ag-dia:has(input:disabled) { opacity: 0.4; cursor: not-allowed; }
+
+.ag-horas { display: grid; gap: 16px; }
+.ag-periodo { display: grid; gap: 8px; }
+.ag-periodo__nome { font-size: 0.75rem; font-weight: 600; color: var(--texto-2); }
+.ag-periodo__lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
+.ag-hora { position: relative; display: grid; place-items: center; min-height: 46px; border-radius: 999px; background: var(--sup); border: 1px solid var(--borda); font-weight: 600; font-size: 0.9375rem; font-variant-numeric: tabular-nums; cursor: pointer; transition: transform 160ms var(--ease-out), background-color 200ms ease, color 200ms ease; }
+.ag-hora:active { transform: scale(0.95); }
+.ag-hora:has(input:checked) { background: var(--ativo-bg); color: var(--ativo-fg); border-color: transparent; box-shadow: inset 0 0 0 1.5px var(--ouro); }
+.ag-servico:has(input:focus-visible), .ag-dia:has(input:focus-visible), .ag-hora:has(input:focus-visible) { outline: 2px solid var(--foco); outline-offset: 2px; }
+
+/* Adicionais (luzes, boyzão...): caixinhas que somam ao corte */
+.rotulo__opcional { font-weight: 400; color: var(--texto-2); }
+.ag-adicionais { display: flex; flex-wrap: wrap; gap: 8px; }
+.ag-adicional { position: relative; display: grid; gap: 2px; padding: 10px 14px 10px 40px; border-radius: 16px; background: var(--sup); border: 1px solid var(--borda); cursor: pointer; transition: transform 160ms var(--ease-out), background-color 200ms ease, color 200ms ease; }
+.ag-adicional:active { transform: scale(0.97); }
+.ag-adicional input { position: absolute; left: 12px; top: 50%; translate: 0 -50%; appearance: none; width: 18px; height: 18px; margin: 0; border-radius: 6px; border: 1.5px solid var(--borda-forte); display: grid; place-items: center; transition: background-color 160ms ease, border-color 160ms ease; }
+.ag-adicional input::after { content: ""; width: 9px; height: 5px; border: 2px solid var(--ativo-fg); border-top: 0; border-right: 0; transform: rotate(-45deg) scale(0); margin-top: -2px; transition: transform 160ms var(--ease-out); }
+.ag-adicional__nome { font-weight: 600; font-size: 0.9375rem; }
+.ag-adicional__info { font-size: 0.8125rem; color: var(--texto-2); font-variant-numeric: tabular-nums; }
+.ag-adicional:has(input:checked) { background: var(--ativo-bg); color: var(--ativo-fg); border-color: transparent; box-shadow: inset 0 0 0 1.5px var(--ouro); }
+.ag-adicional:has(input:checked) .ag-adicional__info { color: inherit; opacity: 0.75; }
+.ag-adicional:has(input:checked) input { background: var(--ativo-fg); border-color: var(--ativo-fg); }
+.ag-adicional:has(input:checked) input::after { border-color: var(--ativo-bg); transform: rotate(-45deg) scale(1); }
+.ag-adicional:has(input:focus-visible) { outline: 2px solid var(--foco); outline-offset: 2px; }
+
+.ag-resumo { display: grid; gap: 10px; padding: 14px; border-radius: 22px; background: var(--sup); border: 1px solid var(--borda); }
+.ag-resumo__texto { font-size: 0.875rem; color: var(--texto-2); text-align: center; transition: filter 200ms ease, opacity 200ms ease; }
+.ag-resumo__texto b { color: var(--texto); font-weight: 600; }
+.ag-resumo__texto.trocando { filter: blur(2px); opacity: 0.6; }
+
+.ag-servico-esq { flex: 0 0 auto; width: 164px; height: 116px; border-radius: 18px; }
+.ag-dia-esq { flex: 0 0 auto; width: 68px; height: 74px; }
+.ag-hora-esq { height: 46px; border-radius: 999px; }
+.ag-horas:has(.ag-hora-esq) { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+
+@media (min-width: 900px) {
+  .ag-servicos, .ag-dias { margin: 0; padding-inline: 0; }
+  .ag-servicos { flex-wrap: wrap; }
+  .ag-servico { flex: 1 1 150px; }
+}

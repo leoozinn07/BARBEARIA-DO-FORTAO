@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200" width="900" height="1200">
+<defs>
+  <radialGradient id="luz" cx="28%" cy="18%" r="95%">
+    <stop offset="0" stop-color="#34343a"/><stop offset=".45" stop-color="#18181b"/><stop offset="1" stop-color="#0a0a0b"/>
+  </radialGradient>
+  <linearGradient id="lamina" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#f4f4f6"/><stop offset=".22" stop-color="#c9c9ce"/><stop offset=".55" stop-color="#7c7c84"/>
+    <stop offset=".8" stop-color="#d7d7dc"/><stop offset="1" stop-color="#ffffff"/>
+  </linearGradient>
+  <linearGradient id="lamina2" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#8a8a91"/><stop offset=".5" stop-color="#ececef"/><stop offset="1" stop-color="#9a9aa1"/>
+  </linearGradient>
+  <linearGradient id="cabo" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#3a3a40"/><stop offset=".18" stop-color="#1c1c20"/><stop offset=".7" stop-color="#0c0c0e"/><stop offset="1" stop-color="#232327"/>
+  </linearGradient>
+  <linearGradient id="caboV" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#0c0c0e"/><stop offset=".3" stop-color="#2e2e33"/><stop offset=".55" stop-color="#18181b"/><stop offset="1" stop-color="#08080a"/>
+  </linearGradient>
+  <linearGradient id="pente" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#4a4a50"/><stop offset=".35" stop-color="#2a2a2f"/><stop offset="1" stop-color="#16161a"/>
+  </linearGradient>
+  <linearGradient id="cerdas" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#e9e6df"/><stop offset=".55" stop-color="#9c978d"/><stop offset="1" stop-color="#4b4842"/>
+  </linearGradient>
+  <radialGradient id="ouro" cx="35%" cy="30%" r="75%">
+    <stop offset="0" stop-color="#f3dc8a"/><stop offset=".55" stop-color="#d4af37"/><stop offset="1" stop-color="#8f6d16"/>
+  </radialGradient>
+  <radialGradient id="prata" cx="35%" cy="30%" r="75%">
+    <stop offset="0" stop-color="#ffffff"/><stop offset=".6" stop-color="#a9a9b0"/><stop offset="1" stop-color="#55555c"/>
+  </radialGradient>
+  <filter id="sombra" x="-30%" y="-30%" width="160%" height="160%">
+    <feDropShadow dx="0" dy="22" stdDeviation="20" flood-color="#000" flood-opacity=".7"/>
+  </filter>
+  <filter id="grao" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch"/>
+    <feColorMatrix type="saturate" values="0"/>
+    <feComponentTransfer><feFuncA type="table" tableValues="0 .09"/></feComponentTransfer>
+  </filter>
+
+  <radialGradient id="vinheta" cx="50%" cy="45%" r="75%">
+    <stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/>
+  </radialGradient>
+</defs>
+<rect width="900" height="1200" fill="url(#luz)"/>
+<g transform="translate(430 500) rotate(-40) scale(1.0)">
+  <g filter="url(#sombra)">
+    <path d="M -18 -30 C 110 -46 320 -42 500 -20 Q 530 -14 530 4 Q 530 22 500 27 C 320 46 110 42 -18 30 Q -40 0 -18 -30 Z" fill="url(#cabo)" stroke="#ffffff" stroke-opacity=".07"/>
+    <path d="M 10 -24 C 140 -36 320 -33 488 -15" fill="none" stroke="#ffffff" stroke-opacity=".22" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="504" cy="4" r="7" fill="url(#prata)"/>
+    <g transform="rotate(-140)">
+      <path d="M -6 -12 C 30 -10 46 -2 62 6 L 70 2 L 64 16 C 40 12 20 14 -6 16 Z" fill="#9c9ca3"/>
+      <path d="M 70 -14 L 104 -30 L 360 -36 Q 396 -36 398 -2 L 398 30 Q 396 58 366 60 Q 230 70 116 44 L 70 26 Z" fill="url(#lamina)"/>
+      <path d="M 366 54 Q 232 64 118 39" fill="none" stroke="#ffffff" stroke-opacity=".95" stroke-width="3" stroke-linecap="round"/>
+      <path d="M 106 -24 L 360 -29" fill="none" stroke="#ffffff" stroke-opacity=".6" stroke-width="2"/>
+      <path d="M 120 6 C 220 10 300 10 380 6" fill="none" stroke="#6a6a72" stroke-opacity=".5" stroke-width="10" stroke-linecap="round"/>
+    </g>
+    <circle r="12" fill="url(#ouro)"/>
+    <circle r="4" fill="#5c4510" opacity=".6"/>
+  </g></g><g transform="translate(640 930) rotate(14) scale(1.05)">
+  <g filter="url(#sombra)">
+    <path d="M -70 0 C -78 -90 -40 -160 0 -168 C 40 -160 78 -90 70 0 Z" fill="url(#cerdas)"/>
+    <path d="M -40 -10 C -48 -80 -26 -130 0 -140" fill="none" stroke="#ffffff" stroke-opacity=".35" stroke-width="4" stroke-linecap="round"/>
+    <rect x="-64" y="-6" width="128" height="16" rx="6" fill="url(#ouro)"/>
+    <path d="M -60 10 C -54 60 -70 120 -76 170 Q -78 190 0 192 Q 78 190 76 170 C 70 120 54 60 60 10 Z" fill="url(#caboV)"/>
+    <path d="M -38 26 C -36 80 -46 130 -50 170" fill="none" stroke="#ffffff" stroke-opacity=".16" stroke-width="5" stroke-linecap="round"/>
+  </g></g>
+<rect width="900" height="1200" fill="url(#vinheta)"/>
+<rect width="900" height="1200" filter="url(#grao)"/>
+</svg>

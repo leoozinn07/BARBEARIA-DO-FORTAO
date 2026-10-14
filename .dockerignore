@@ -1,0 +1,8 @@
+node_modules
+.env
+.git
+var
+prototipos
+testes
+docs
+*.log

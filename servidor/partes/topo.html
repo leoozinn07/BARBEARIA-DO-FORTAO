@@ -1,0 +1,29 @@
+<a class="pular" href="#conteudo">Pular para o conteúdo</a>
+<header class="topo" data-topo>
+  <nav class="topo__nav" aria-label="Principal">
+    <a class="marca" href="/" aria-label="Barbearia do Fortão, início">
+      <img src="/img/braco.svg" alt="" width="40" height="47">
+      <span class="marca__texto" aria-hidden="true"><small>Barbearia do</small><b>Fortão</b></span>
+    </a>
+    <div class="topo__links">
+      <a href="/#servicos">Serviços</a>
+      <a href="/#fortao">O Fortão</a>
+      <a href="/#onde">Onde fica</a>
+      <a href="/admin" data-so-admin hidden>Painel</a>
+      <a class="botao botao--cheio botao--p" href="/agendar">Marcar horário</a>
+    </div>
+    <button class="icone-botao" type="button" data-tema-botao aria-label="Mudar para o tema claro"><i class="ph ph-sun" aria-hidden="true"></i></button>
+    <button class="icone-botao" type="button" data-avisos-botao aria-controls="avisos" aria-expanded="false" hidden>
+      <i class="ph ph-bell" aria-hidden="true"></i><span class="sr-only">Avisos</span><span class="contador" data-contador hidden></span>
+    </button>
+    <a class="icone-botao" href="/entrar" data-conta-link><i class="ph ph-user" aria-hidden="true"></i><span class="sr-only" data-conta-rotulo>Entrar</span></a>
+  </nav>
+</header>
+<span class="sentinela" data-sentinela aria-hidden="true"></span>
+<section class="avisos-painel" id="avisos" data-avisos-painel aria-labelledby="avisos-titulo" hidden>
+  <div class="avisos-painel__topo">
+    <h2 id="avisos-titulo">Avisos</h2>
+    <button class="botao botao--suave botao--p" type="button" data-avisos-fechar>Fechar</button>
+  </div>
+  <div data-avisos-lista></div>
+</section>

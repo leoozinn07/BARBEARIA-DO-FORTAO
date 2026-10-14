@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900">
+<defs>
+  <radialGradient id="luz" cx="28%" cy="18%" r="95%">
+    <stop offset="0" stop-color="#34343a"/><stop offset=".45" stop-color="#18181b"/><stop offset="1" stop-color="#0a0a0b"/>
+  </radialGradient>
+  <linearGradient id="lamina" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#f4f4f6"/><stop offset=".22" stop-color="#c9c9ce"/><stop offset=".55" stop-color="#7c7c84"/>
+    <stop offset=".8" stop-color="#d7d7dc"/><stop offset="1" stop-color="#ffffff"/>
+  </linearGradient>
+  <linearGradient id="lamina2" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#8a8a91"/><stop offset=".5" stop-color="#ececef"/><stop offset="1" stop-color="#9a9aa1"/>
+  </linearGradient>
+  <linearGradient id="cabo" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#3a3a40"/><stop offset=".18" stop-color="#1c1c20"/><stop offset=".7" stop-color="#0c0c0e"/><stop offset="1" stop-color="#232327"/>
+  </linearGradient>
+  <linearGradient id="caboV" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#0c0c0e"/><stop offset=".3" stop-color="#2e2e33"/><stop offset=".55" stop-color="#18181b"/><stop offset="1" stop-color="#08080a"/>
+  </linearGradient>
+  <linearGradient id="pente" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#4a4a50"/><stop offset=".35" stop-color="#2a2a2f"/><stop offset="1" stop-color="#16161a"/>
+  </linearGradient>
+  <linearGradient id="cerdas" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#e9e6df"/><stop offset=".55" stop-color="#9c978d"/><stop offset="1" stop-color="#4b4842"/>
+  </linearGradient>
+  <radialGradient id="ouro" cx="35%" cy="30%" r="75%">
+    <stop offset="0" stop-color="#f3dc8a"/><stop offset=".55" stop-color="#d4af37"/><stop offset="1" stop-color="#8f6d16"/>
+  </radialGradient>
+  <radialGradient id="prata" cx="35%" cy="30%" r="75%">
+    <stop offset="0" stop-color="#ffffff"/><stop offset=".6" stop-color="#a9a9b0"/><stop offset="1" stop-color="#55555c"/>
+  </radialGradient>
+  <filter id="sombra" x="-30%" y="-30%" width="160%" height="160%">
+    <feDropShadow dx="0" dy="22" stdDeviation="20" flood-color="#000" flood-opacity=".7"/>
+  </filter>
+  <filter id="grao" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" stitchTiles="stitch"/>
+    <feColorMatrix type="saturate" values="0"/>
+    <feComponentTransfer><feFuncA type="table" tableValues="0 .09"/></feComponentTransfer>
+  </filter>
+
+  <radialGradient id="vinheta" cx="50%" cy="45%" r="75%">
+    <stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/>
+  </radialGradient>
+</defs>
+<rect width="1200" height="900" fill="url(#luz)"/>
+<g transform="translate(400 230) rotate(-14)">
+  <g filter="url(#sombra)">
+    <path d="M -86 -2 L 86 -2 L 80 40 L -80 40 Z" fill="url(#lamina2)"/>
+    <rect x="-78" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/><rect x="-70" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/><rect x="-62" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/><rect x="-54" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/><rect x="-46" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/><rect x="-38" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/><rect x="-30" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/><rect x="-22" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/><rect x="-14" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/><rect x="-6" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/><rect x="2" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/><rect x="10" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/><rect x="18" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/><rect x="26" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/><rect x="34" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/><rect x="42" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/><rect x="50" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/><rect x="58" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/><rect x="66" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/><rect x="74" y="-28" width="4" height="26" rx="1.5" fill="#d9d9de"/>
+    <path d="M -84 34 C -96 140 -88 300 -70 430 Q -64 470 0 472 Q 64 470 70 430 C 88 300 96 140 84 34 Z" fill="url(#caboV)"/>
+    <path d="M -56 70 C -64 170 -60 300 -48 420" fill="none" stroke="#ffffff" stroke-opacity=".16" stroke-width="5" stroke-linecap="round"/>
+    <rect x="-16" y="150" width="32" height="70" rx="16" fill="#0a0a0c" stroke="#ffffff" stroke-opacity=".12"/>
+    <rect x="-9" y="160" width="18" height="26" rx="9" fill="#3a3a40"/>
+    <circle cy="300" r="22" fill="none" stroke="url(#ouro)" stroke-width="4"/>
+    <path d="M 0 472 C 4 520 40 560 120 590" fill="none" stroke="#141417" stroke-width="16" stroke-linecap="round"/>
+  </g></g><g transform="translate(860 520) rotate(10) scale(1.15)">
+  <g filter="url(#sombra)">
+    <path d="M -70 0 C -78 -90 -40 -160 0 -168 C 40 -160 78 -90 70 0 Z" fill="url(#cerdas)"/>
+    <path d="M -40 -10 C -48 -80 -26 -130 0 -140" fill="none" stroke="#ffffff" stroke-opacity=".35" stroke-width="4" stroke-linecap="round"/>
+    <rect x="-64" y="-6" width="128" height="16" rx="6" fill="url(#ouro)"/>
+    <path d="M -60 10 C -54 60 -70 120 -76 170 Q -78 190 0 192 Q 78 190 76 170 C 70 120 54 60 60 10 Z" fill="url(#caboV)"/>
+    <path d="M -38 26 C -36 80 -46 130 -50 170" fill="none" stroke="#ffffff" stroke-opacity=".16" stroke-width="5" stroke-linecap="round"/>
+  </g></g><g transform="translate(560 790) rotate(-4) scale(1.0)"><g filter="url(#sombra)"><rect x="0" y="0" width="560" height="30" rx="10" fill="url(#pente)"/><rect x="30" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="40" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="50" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="60" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="70" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="80" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="90" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="100" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="110" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="120" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="130" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="140" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="150" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="160" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="170" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="180" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="190" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="200" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="210" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="220" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="230" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="240" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="250" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="260" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="270" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="280" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="290" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="300" y="22" width="4" height="58" rx="2" fill="url(#pente)"/><rect x="310" y="22" width="7" height="58" rx="2" fill="url(#pente)"/><rect x="325" y="22" width="7" height="58" rx="2" fill="url(#pente)"/><rect x="340" y="22" width="7" height="58" rx="2" fill="url(#pente)"/><rect x="355" y="22" width="7" height="58" rx="2" fill="url(#pente)"/><rect x="370" y="22" width="7" height="58" rx="2" fill="url(#pente)"/><rect x="385" y="22" width="7" height="58" rx="2" fill="url(#pente)"/><rect x="400" y="22" width="7" height="58" rx="2" fill="url(#pente)"/><rect x="415" y="22" width="7" height="58" rx="2" fill="url(#pente)"/><rect x="430" y="22" width="7" height="58" rx="2" fill="url(#pente)"/><rect x="445" y="22" width="7" height="58" rx="2" fill="url(#pente)"/><rect x="460" y="22" width="7" height="58" rx="2" fill="url(#pente)"/><rect x="475" y="22" width="7" height="58" rx="2" fill="url(#pente)"/><rect x="490" y="22" width="7" height="58" rx="2" fill="url(#pente)"/><rect x="505" y="22" width="7" height="58" rx="2" fill="url(#pente)"/><rect x="520" y="22" width="7" height="58" rx="2" fill="url(#pente)"/><rect x="535" y="22" width="7" height="58" rx="2" fill="url(#pente)"/><path d="M 14 6 L 546 6" stroke="#ffffff" stroke-opacity=".18" stroke-width="2" stroke-linecap="round"/></g></g>
+<rect width="1200" height="900" fill="url(#vinheta)"/>
+<rect width="1200" height="900" filter="url(#grao)"/>
+</svg>
