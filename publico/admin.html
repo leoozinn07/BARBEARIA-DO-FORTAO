@@ -20,7 +20,8 @@
       <button class="botao botao--cheio" type="button" data-novo-abrir><i class="ph-bold ph-plus" aria-hidden="true"></i> Novo horário</button>
     </header>
 
-    <p class="alerta" data-aviso-email hidden><i class="ph ph-envelope-simple-open" aria-hidden="true"></i><span>Os e-mails de confirmação e lembrete ainda não estão saindo: falta configurar o envio (SMTP). O passo a passo está no guia de deploy. Até lá, os avisos aparecem só no site.</span></p>
+    <p class="alerta" data-aviso-email hidden><i class="ph ph-envelope-simple-open" aria-hidden="true"></i><span>Os e-mails de confirmação e lembrete ainda não estão saindo: falta colocar a chave da API do Brevo no servidor (BREVO_API_KEY). O passo a passo está no guia de deploy. Até lá, os avisos aparecem só no site.</span></p>
+    <p class="alerta alerta--erro" data-aviso-email-erro hidden><i class="ph ph-warning-circle" aria-hidden="true"></i><span>Alguns e-mails não saíram. Motivo: <b data-email-erro></b>. Confira a chave do Brevo e o remetente (guia de deploy, seção 4); o site tenta de novo sozinho.</span></p>
 
     <section class="resumo" aria-label="Resumo" data-resumo>
       <div class="esqueleto resumo__esq"></div><div class="esqueleto resumo__esq"></div><div class="esqueleto resumo__esq"></div>

@@ -25,7 +25,7 @@ Sucesso é: cliente marca em poucos toques, não esquece o horário, o Fortão n
 | Catálogo (13/10) | Corte navalhado, Corte normal, Corte + sobrancelha, Corte + sobrancelha + barba, Corte + barba; adicionais Luzes, Boyzão e Progressiva. Preços e tempos iniciais são suposição, editáveis no painel |
 | Confirmação antes de marcar | Folha "Tem certeza e consciência de que esse será o horário agendado?" com Sim / Não |
 | Sem robô do WhatsApp (13/10) | O cliente informa o celular no mini formulário da confirmação (obrigatório). O Fortão fala com ele pelo próprio WhatsApp: no painel, botão Mensagem (texto pronto em link wa.me) e Salvar contato (.vcf) |
-| Lembretes por e-mail, de graça | Confirmação, 1 dia antes, 2 horas antes, remarcação e cancelamento, por SMTP (Brevo grátis) e no sino do site |
+| Lembretes por e-mail, de graça | Confirmação, 1 dia antes, 2 horas antes, remarcação e cancelamento pela API do Brevo (`BREVO_API_KEY`, grátis até 300 por dia; SMTP como alternativa) e no sino do site |
 | Termos e privacidade no site | Rodapé de todas as páginas, cadastro, tela de entrar e folha de confirmação; textos revistos para e-mail, WhatsApp manual e biometria |
 | Entrar com biometria | Passkeys (WebAuthn): o cliente com conta ativa no perfil e entra com digital, rosto ou PIN |
 | Lembrete logo depois de marcar | Agenda do celular (.ics) e Google Agenda na folha de sucesso e no cartão do horário |
@@ -42,7 +42,7 @@ Node 22 + Express 5 ──► MySQL 8
    │                            ├─ dados (usuários, agenda, avisos…)
    │                            └─ fila de e-mails (outbox)
    ├─ a cada minuto: lembretes 24 h e 2 h
-   ├─ a cada 15 s: entrega de e-mails por SMTP, com novas tentativas
+   ├─ a cada 15 s: entrega de e-mails (API do Brevo ou SMTP), com novas tentativas
    ├─ a cada 10 min: horário confirmado que terminou há 3 h vira "concluído"
    └─ a cada 6 h: limpeza de sessões, tokens e avisos vencidos
 ```
@@ -124,7 +124,7 @@ A migração `002_site.sql` tira a tabela de inscrições de notificação push 
 | Lembrete 24 h e 2 h | Sim | Sim |
 | Biometria ativada | Aviso de segurança | Sim |
 
-Sem SMTP configurado, os e-mails ficam em `var/emails/` e o painel mostra um aviso. WhatsApp só pelo Fortão, manual, com os botões do painel (seção 9).
+Sem a chave do Brevo (nem SMTP), os e-mails ficam em `var/emails/` e o painel mostra um aviso; quando o Brevo recusa um envio, o painel mostra a resposta dele. WhatsApp só pelo Fortão, manual, com os botões do painel (seção 9).
 
 ## 9. Telas
 

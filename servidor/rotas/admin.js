@@ -1,7 +1,7 @@
 // Painel do Fortão. Toda rota exige papel admin e as ações ficam na auditoria.
 import { Router } from 'express';
 import { consulta, executar, umaLinha, transacao } from '../db/index.js';
-import { smtpConfigurado } from '../emails/fila.js';
+import { emailConfigurado, ultimoErroEmail } from '../emails/fila.js';
 import { erros } from '../lib/erros.js';
 import * as tempo from '../lib/tempo.js';
 import { campos, validar, z } from '../lib/validacao.js';
@@ -58,8 +58,9 @@ rotasAdmin.get('/resumo', validar(z.object({ data: campos.dataISO.optional() }),
   const normalizar = (l) => Object.fromEntries(Object.entries(l).map(([k, v]) => [k, Number(v ?? 0)]));
   res.set('Cache-Control', 'no-store').json({
     data: hoje, dia: normalizar(doDia), semana: normalizar(daSemana), mes: normalizar(doMes), clientes: Number(clientes.total),
-    // Sem SMTP, os e-mails não saem de verdade: o painel mostra o aviso
-    email_real: smtpConfigurado(),
+    // Sem Brevo nem SMTP, os e-mails não saem de verdade; com erro de entrega, o painel mostra o motivo
+    email_real: emailConfigurado(),
+    email_erro: emailConfigurado() ? await ultimoErroEmail() : null,
   });
 }));
 

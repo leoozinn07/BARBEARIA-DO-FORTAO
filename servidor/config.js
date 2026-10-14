@@ -41,6 +41,8 @@ export const config = {
   },
 
   email: {
+    // Com a chave da API do Brevo, os e-mails saem por ela e o SMTP é ignorado (passo a passo em docs/deploy.md)
+    brevoChave: env.BREVO_API_KEY || '',
     host: env.SMTP_HOST || '',
     port: num(env.SMTP_PORTA, 587),
     secure: bool(env.SMTP_SEGURO, false),

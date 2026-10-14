@@ -66,7 +66,7 @@ Quando o Fortão cancela ou remarca um cliente do balcão (sem e-mail), a mensag
 
 ## Lembretes
 
-Confirmação, lembrete 1 dia antes e 2 horas antes, remarcação e cancelamento vão por **e-mail**, sem custo: o Brevo manda 300 e-mails por dia no plano grátis ([docs/deploy.md](docs/deploy.md), seção 4). Enquanto o envio não estiver configurado, o painel avisa e os e-mails ficam salvos em `var/emails/`.
+Confirmação, lembrete 1 dia antes e 2 horas antes, remarcação e cancelamento vão por **e-mail**, sem custo, pela **API do Brevo** (300 e-mails por dia no plano grátis). Basta colocar a chave em `BREVO_API_KEY` no `.env` ([docs/deploy.md](docs/deploy.md), seção 4). Enquanto ela não estiver lá, o painel avisa e os e-mails ficam salvos em `var/emails/`; se o Brevo recusar algum envio, o painel mostra o motivo.
 
 ## Entrar com biometria
 
@@ -95,7 +95,7 @@ npm run admin:criar -- --email fortao@seuemail.com --nome "Fortão"
 npm run dev                 # http://localhost:3000
 ```
 
-As tabelas são criadas sozinhas na primeira vez. Sem SMTP configurado, os e-mails ficam salvos em `var/emails/` e o painel avisa.
+As tabelas são criadas sozinhas na primeira vez. Sem a chave do Brevo, os e-mails ficam salvos em `var/emails/` e o painel avisa.
 
 Para conferir o código: `npm run lint`.
 
@@ -118,7 +118,7 @@ docs/                    especificação, deploy, melhorias, prévias
 ## Próximos passos
 
 1. Colocar no ar: [docs/deploy.md](docs/deploy.md).
-2. Configurar o envio de e-mail (Brevo grátis): [docs/deploy.md](docs/deploy.md), seção 4.
+2. Ligar o e-mail pela API do Brevo (grátis): [docs/deploy.md](docs/deploy.md), seção 4.
 3. Preencher endereço, WhatsApp, Instagram e dados da empresa no painel (aba Barbearia).
 4. Escolher melhorias: [docs/melhorias.md](docs/melhorias.md).
 

@@ -8,7 +8,7 @@ O jeito mais simples: um servidor VPS com Docker. O `docker-compose.yml` sobe o 
 | --- | --- | --- |
 | Domínio | registro.br (`barbeariadofortao.com.br`) | R$ 40 por ano |
 | Servidor | VPS com 2 GB de RAM (Hostinger, Contabo, DigitalOcean, Magalu Cloud) | R$ 30 a R$ 60 por mês |
-| E-mail de envio (confirmação e lembretes) | Brevo (300 e-mails por dia grátis) ou Resend | grátis |
+| E-mail de envio (confirmação e lembretes) | API do Brevo (300 e-mails por dia grátis) | grátis |
 
 ## 2. Domínio
 
@@ -29,7 +29,7 @@ No `.env`, preencha no mínimo:
 
 - `DOMINIO` e `APP_URL=https://seu-dominio`
 - `MYSQL_SENHA` e `MYSQL_SENHA_ROOT` (senhas longas e diferentes)
-- `SMTP_*` e `EMAIL_REMETENTE` (veja a seção 4)
+- `BREVO_API_KEY` e `EMAIL_REMETENTE` (veja a seção 4)
 - `EMAIL_ADMIN` com o e-mail do Fortão
 
 ```bash
@@ -39,13 +39,34 @@ docker compose exec app node scripts/criar-admin.js --email fortao@seuemail.com 
 
 O comando mostra a senha gerada uma única vez. Entre em `https://seu-dominio/entrar` e o painel fica em `/admin`. As tabelas e o catálogo inicial são criados sozinhos na primeira vez.
 
-## 4. E-mail que chega na caixa de entrada
+## 4. E-mail pela API do Brevo (grátis)
 
-1. Crie a conta no Brevo (ou outro provedor) e cadastre o domínio.
-2. Adicione no registro.br os registros **SPF**, **DKIM** e **DMARC** que o provedor mostrar. Sem eles, os lembretes caem no spam.
-3. Copie host, porta, usuário e senha SMTP para o `.env` e reinicie: `docker compose restart app`.
+Confirmação, lembretes (1 dia e 2 horas antes), remarcação, cancelamento e senha saem por e-mail. O jeito recomendado é a **API do Brevo**: grátis até 300 e-mails por dia e funciona mesmo em hospedagem que bloqueia as portas de SMTP (a DigitalOcean, por exemplo, bloqueia).
 
-Enquanto o SMTP não estiver configurado, o painel mostra um aviso e os avisos aparecem só no sino do site.
+1. Crie a conta grátis em [brevo.com](https://www.brevo.com) com o e-mail da barbearia.
+2. **Valide o domínio:** em *Senders, Domains & Dedicated IPs > Domains*, adicione `barbeariadofortao.com.br` e copie para o registro.br os registros que o Brevo mostrar (código do Brevo, **DKIM** e **DMARC**). Sem isso, os lembretes caem no spam ou nem saem.
+3. **Remetente:** em *Senders*, cadastre o endereço que vai aparecer para o cliente, por exemplo `contato@barbeariadofortao.com.br`.
+4. **Chave da API:** em *SMTP & API > API Keys*, clique em *Generate a new API key*, dê um nome (`site`) e copie a chave (começa com `xkeysib-`). Ela aparece uma vez só.
+5. No `.env` do servidor:
+
+   ```
+   BREVO_API_KEY=xkeysib-a-chave-que-voce-copiou
+   EMAIL_REMETENTE="Barbearia do Fortão <contato@barbeariadofortao.com.br>"
+   ```
+
+6. Aplique: `docker compose up -d app` (o `restart` não relê o `.env`).
+7. **Confira:** o aviso amarelo de e-mail some do painel. Crie uma conta de teste no site: o e-mail de confirmação chega em segundos e aparece em *Transactional > Logs* no Brevo.
+
+Se algo der errado, o painel mostra um aviso vermelho com a resposta do Brevo e o site tenta de novo sozinho (2, 4, 8, 16... minutos). Os motivos mais comuns:
+
+| O painel mostra | O que fazer |
+| --- | --- |
+| `Brevo 401: Key not found` | Chave copiada errada ou apagada. Gere outra e troque no `.env`. |
+| `Brevo 400` falando do remetente (*sender*) | O `EMAIL_REMETENTE` não está validado no Brevo (passos 2 e 3). |
+| `Brevo 403` dizendo que a conta não está ativada | Conta nova: peça ao suporte do Brevo para ativar o envio transacional (SMTP). |
+| `Brevo 402` | Acabou o limite do plano grátis no dia. |
+
+Sem a chave, o site funciona normalmente: os e-mails ficam salvos em `var/emails/` e o painel avisa. Prefere SMTP? Preencha `SMTP_*` em vez de `BREVO_API_KEY` (no Brevo: *SMTP & API > SMTP*).
 
 ## 5. Biometria e WhatsApp
 

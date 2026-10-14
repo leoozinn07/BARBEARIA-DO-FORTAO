@@ -1,5 +1,6 @@
 // Fila de e-mails (outbox). O e-mail é gravado junto com o evento e entregue em seguida, com novas tentativas.
-// Sem SMTP configurado, o "envio" salva o e-mail em var/emails/ para conferir no desenvolvimento.
+// Entrega pela API do Brevo (BREVO_API_KEY) ou por SMTP. Sem nenhum dos dois, o "envio" salva o e-mail
+// em var/emails/ para conferir no desenvolvimento.
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import nodemailer from 'nodemailer';
@@ -24,22 +25,72 @@ function transporteArquivo() {
   };
 }
 
+const URL_BREVO = 'https://api.brevo.com/v3/smtp/email';
+
+/** "Barbearia do Fortão <contato@dominio>" vira { name, email }, como o Brevo pede. */
+export function remetenteBrevo(texto) {
+  const m = /^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/.exec(String(texto));
+  return m ? { name: m[1].trim() || undefined, email: m[2].trim() } : { email: String(texto).trim() };
+}
+
+// API HTTPS do Brevo (porta 443): funciona mesmo em hospedagem que bloqueia as portas de SMTP
+function transporteBrevo() {
+  return {
+    async sendMail(msg) {
+      const r = await fetch(URL_BREVO, {
+        method: 'POST',
+        headers: { 'api-key': config.email.brevoChave, 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({
+          sender: remetenteBrevo(msg.from),
+          to: [{ email: msg.to }],
+          subject: msg.subject,
+          htmlContent: msg.html,
+          textContent: msg.text,
+          attachment: msg.attachments?.length
+            ? msg.attachments.map((a) => ({ name: a.filename, content: Buffer.from(a.content).toString('base64') }))
+            : undefined,
+        }),
+        signal: AbortSignal.timeout(20000),
+      });
+      const corpo = await r.json().catch(() => ({}));
+      // A mensagem do Brevo vai para o log e para o aviso do painel ("Key not found", remetente não validado...)
+      if (!r.ok) throw new Error(`Brevo ${r.status}: ${corpo.message || corpo.code || r.statusText}`);
+      return { messageId: corpo.messageId };
+    },
+  };
+}
+
 function obterTransporte() {
   if (transporte) return transporte;
-  transporte = config.email.host
-    ? nodemailer.createTransport({
-        host: config.email.host,
-        port: config.email.port,
-        secure: config.email.secure,
-        auth: config.email.user ? { user: config.email.user, pass: config.email.pass } : undefined,
-      })
-    : transporteArquivo();
-  if (!config.email.host) log.aviso('smtp_nao_configurado', { pasta: config.email.pastaLocal });
+  if (config.email.brevoChave) {
+    transporte = transporteBrevo();
+    log.info('email_pelo_brevo');
+  } else if (config.email.host) {
+    transporte = nodemailer.createTransport({
+      host: config.email.host,
+      port: config.email.port,
+      secure: config.email.secure,
+      auth: config.email.user ? { user: config.email.user, pass: config.email.pass } : undefined,
+    });
+  } else {
+    transporte = transporteArquivo();
+    log.aviso('email_nao_configurado', { pasta: config.email.pastaLocal });
+  }
   return transporte;
 }
 
 /** O painel avisa o Fortão quando os e-mails ainda não saem de verdade. */
-export const smtpConfigurado = () => Boolean(config.email.host);
+export const emailConfigurado = () => Boolean(config.email.brevoChave || config.email.host);
+
+/** Último erro de entrega ainda sem solução (últimas 48 h), para o painel mostrar. */
+export async function ultimoErroEmail() {
+  const linha = await umaLinha(
+    `SELECT erro FROM emails_saida
+      WHERE enviado_em IS NULL AND erro IS NOT NULL AND criado_em > UTC_TIMESTAMP() - INTERVAL 2 DAY
+      ORDER BY id DESC LIMIT 1`,
+  );
+  return linha?.erro ?? null;
+}
 
 /** Grava o e-mail na fila. Use o `conn` da transação do evento. */
 export async function enfileirarEmail(conn, { para, assunto, html, texto, anexos = null }) {

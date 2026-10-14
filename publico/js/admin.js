@@ -43,6 +43,8 @@ async function carregarResumo() {
   try {
     const r = await get(`/admin/resumo?data=${dia}`);
     $('[data-aviso-email]').hidden = r.email_real;
+    $('[data-aviso-email-erro]').hidden = !r.email_erro;
+    $('[data-email-erro]').textContent = r.email_erro || '';
     const ativos = (x) => x.total - x.cancelados;
     $('[data-resumo]').replaceChildren(
       h('div', { class: 'resumo__item' }, h('small', {}, dia === hojeISO() ? 'Hoje' : 'Neste dia'), h('b', {}, String(ativos(r.dia))), h('span', {}, `horários, ${reais(r.dia.previsto_centavos)}`)),
