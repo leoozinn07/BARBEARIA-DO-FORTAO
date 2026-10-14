@@ -65,6 +65,7 @@ Se algo der errado, o painel mostra um aviso vermelho com a resposta do Brevo e 
 | `Brevo 400` falando do remetente (*sender*) | O `EMAIL_REMETENTE` não está validado no Brevo (passos 2 e 3). |
 | `Brevo 403` dizendo que a conta não está ativada | Conta nova: peça ao suporte do Brevo para ativar o envio transacional (SMTP). |
 | `Brevo 402` | Acabou o limite do plano grátis no dia. |
+| `Brevo sem conexão` | O servidor não alcança `api.brevo.com`: confira a internet e o firewall da hospedagem. |
 
 Sem a chave, o site funciona normalmente: os e-mails ficam salvos em `var/emails/` e o painel avisa. Prefere SMTP? Preencha `SMTP_*` em vez de `BREVO_API_KEY` (no Brevo: *SMTP & API > SMTP*).
 

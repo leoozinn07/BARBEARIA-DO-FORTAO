@@ -51,6 +51,9 @@ function transporteBrevo() {
             : undefined,
         }),
         signal: AbortSignal.timeout(20000),
+      }).catch((e) => {
+        // Sem resposta (DNS, firewall, tempo esgotado): diz isso em vez de só "fetch failed"
+        throw new Error(`Brevo sem conexão: ${e.cause?.code || e.cause?.message || e.name}`);
       });
       const corpo = await r.json().catch(() => ({}));
       // A mensagem do Brevo vai para o log e para o aviso do painel ("Key not found", remetente não validado...)
