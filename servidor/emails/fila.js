@@ -3,6 +3,7 @@
 // em var/emails/ para conferir no desenvolvimento.
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { waitUntil } from '@vercel/functions';
 import nodemailer from 'nodemailer';
 import { config } from '../config.js';
 import { consulta, umaLinha } from '../db/index.js';
@@ -148,6 +149,11 @@ export async function processarFila({ limite = 20 } = {}) {
 
 /** Pede uma entrega logo (depois de um commit), sem esperar o próximo ciclo. */
 export function acordarEntregador() {
+  // Na Vercel a função pode parar logo depois da resposta: a entrega começa já e a resposta espera por ela (waitUntil)
+  if (config.vercel) {
+    waitUntil(processarFila().catch((e) => log.erro('fila_email', { erro: e.message })));
+    return;
+  }
   if (agendado) return;
   agendado = setTimeout(() => {
     agendado = null;

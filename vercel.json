@@ -1,0 +1,28 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm ci",
+  "buildCommand": "rm -rf estatico-vercel && mkdir -p estatico-vercel && cp -r publico/css publico/js publico/img publico/fontes publico/icones estatico-vercel/",
+  "outputDirectory": "estatico-vercel",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30,
+      "includeFiles": "{publico/**,servidor/**}"
+    }
+  },
+  "headers": [
+    {
+      "source": "/(css|js|img|fontes|icones)/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Cache-Control", "value": "public, max-age=3600" }
+      ]
+    },
+    {
+      "source": "/(img|fontes)/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=2592000" }]
+    }
+  ],
+  "rewrites": [{ "source": "/(.*)", "destination": "/api" }],
+  "crons": [{ "path": "/api/rotinas", "schedule": "0 9 * * *" }]
+}

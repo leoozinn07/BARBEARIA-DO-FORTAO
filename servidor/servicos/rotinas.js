@@ -1,5 +1,6 @@
 // Rotinas em segundo plano: lembretes, entrega de e-mails, conclusão automática e limpeza de dados vencidos.
 // Cada lembrete é "reservado" com um UPDATE condicional: mesmo com duas instâncias, ninguém recebe lembrete duplicado.
+import { waitUntil } from '@vercel/functions';
 import { config } from '../config.js';
 import { consulta, executar, transacao } from '../db/index.js';
 import { processarFila } from '../emails/fila.js';
@@ -56,6 +57,26 @@ export async function limpar() {
   await executar('DELETE FROM emails_saida WHERE (enviado_em IS NOT NULL OR tentativas >= 6) AND criado_em < UTC_TIMESTAMP() - INTERVAL 30 DAY');
   await executar('DELETE FROM agenda_travas WHERE dia < UTC_DATE() - INTERVAL 2 DAY');
   await limparDesafios();
+}
+
+/** Tudo de uma vez: usado por /api/rotinas (agendamento na Vercel e no GitHub) e nos pedidos comuns, na Vercel. */
+export async function rodarRotinas({ limpeza = false } = {}) {
+  const lembretes = await processarLembretes();
+  const concluidos = await concluirPassados();
+  const emails = await processarFila();
+  if (limpeza) await limpar();
+  return { lembretes, concluidos, emails };
+}
+
+// Na Vercel não há relógio rodando: cada instância aproveita os pedidos dos clientes para rodar as rotinas,
+// no máximo uma vez a cada 5 minutos (o agendamento de /api/rotinas cobre as horas sem movimento)
+let ultimaVez = 0;
+export function rotinasNoCaminho(_req, _res, next) {
+  if (config.vercel && Date.now() - ultimaVez > 5 * 60000) {
+    ultimaVez = Date.now();
+    waitUntil(rodarRotinas().catch((e) => log.erro('rotinas_no_caminho', { erro: e.message })));
+  }
+  next();
 }
 
 const timers = [];

@@ -1,5 +1,10 @@
 # Colocar o site no ar
 
+Dois caminhos:
+
+- **Vercel (mais simples, sem servidor para cuidar):** veja [Hospedar na Vercel](#hospedar-na-vercel), no fim desta página.
+- **Servidor próprio (VPS) com Docker:** as seções 1 a 8 abaixo.
+
 O jeito mais simples: um servidor VPS com Docker. O `docker-compose.yml` sobe o MySQL, o site e o Caddy, que cuida do HTTPS sozinho. O site precisa ficar ligado o tempo todo: é ele que manda os lembretes e entrega os e-mails. O Caddy também manda quem digitar `www.` para o domínio principal: a sessão e a biometria ficam presas a um endereço só.
 
 ## 1. O que você precisa
@@ -144,3 +149,47 @@ As migrações novas do banco (arquivos em `servidor/db/migracoes/`) rodam sozin
 ## Sem Docker
 
 Também funciona em qualquer hospedagem com Node 22 e MySQL 8: `npm ci --omit=dev`, configure o `.env` e rode `npm start` atrás de um proxy com HTTPS (Nginx ou Caddy). Use `CONFIAR_PROXY=1` para os limites por IP enxergarem o IP real do cliente. Evite planos que "dormem" quando ninguém acessa: dormindo, os lembretes não saem.
+
+## Hospedar na Vercel
+
+Na Vercel o site roda como função (sem servidor ligado o tempo todo). O código já está pronto para isso:
+
+- `api/index.js` e `vercel.json`: as páginas passam pelo app e os arquivos de `css`, `js`, `img`, `fontes` e `icones` saem direto da CDN da Vercel.
+- As tabelas do banco são criadas sozinhas no primeiro acesso.
+- Os e-mails saem na hora em que são criados.
+- Os lembretes rodam em `/api/rotinas`, chamado de hora em hora pelo GitHub (workflow **Rotinas do site**), uma vez por dia pela própria Vercel e também durante o uso normal do site.
+
+### 1. Banco MySQL na nuvem (grátis)
+
+A Vercel não tem MySQL próprio. O caminho grátis é o **TiDB Cloud Starter** (compatível com MySQL; o plano grátis atual tem 25 GiB):
+
+1. Crie a conta em tidbcloud.com e um cluster **Starter** na região **AWS São Paulo (sa-east-1)**, se aparecer, ou na mais próxima.
+2. Em **Connect**, gere a senha e copie: host, porta (4000), usuário (algo como `xxxx.root`) e senha.
+3. Em **SQL Editor**, rode: `CREATE DATABASE fortao;`
+
+Prefere MySQL "de verdade"? O plano Developer da Aiven (cerca de US$ 5 por mês) também funciona. O plano grátis de MySQL da Aiven vai ser desligado em dezembro de 2026.
+
+### 2. Projeto na Vercel
+
+1. Em vercel.com: **Add New > Project > Import Git Repository**. Na primeira vez, a Vercel pede para instalar o app dela no GitHub: dê acesso ao repositório `BARBEARIA-DO-FORTAO`.
+2. Escolha a branch `main`. **Framework Preset: Other**. O resto vem do `vercel.json`.
+3. Antes de clicar em **Deploy**, abra **Environment Variables** e crie:
+
+   | Variável | Valor |
+   | --- | --- |
+   | `MYSQL_URL` | `mysql://USUARIO:SENHA@HOST:4000/fortao` (do passo 1) |
+   | `MYSQL_SSL` | `1` |
+   | `NODE_ENV` | `production` |
+   | `CRON_SECRET` | um código longo qualquer (protege a limpeza diária) |
+   | `EMAIL_REMETENTE` | `Barbearia do Fortão <contato@seu-dominio>` |
+   | `BREVO_API_KEY` | a chave do Brevo (seção 4) |
+   | `APP_URL` | só se usar domínio próprio: `https://seu-dominio` |
+
+4. **Deploy**. O endereço sai como `https://barbearia-do-fortao.vercel.app` (ou parecido).
+
+### 3. Depois do primeiro deploy
+
+- **Conta do Fortão:** no seu computador, com o mesmo `MYSQL_URL` e `MYSQL_SSL=1` num `.env`, rode `npm run admin:criar -- --email fortao@seuemail.com --nome "Fortão"`.
+- **Lembretes:** se o endereço não for `https://barbearia-do-fortao.vercel.app`, crie no GitHub **Settings > Secrets and variables > Actions > Variables** a variável `SITE_URL` com o endereço certo.
+- **Domínio próprio:** em **Settings > Domains** da Vercel; depois troque `APP_URL` e faça um novo deploy. A biometria fica presa ao domínio: troque antes de os clientes ativarem.
+- Cada mudança que entrar na `main` publica sozinha. O workflow **Publicar no servidor** é só para VPS: sem os segredos `VPS_*`, ele não faz nada.

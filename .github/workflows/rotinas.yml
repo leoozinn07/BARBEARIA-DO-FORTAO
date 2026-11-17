@@ -1,0 +1,23 @@
+# Na Vercel não há processo contínuo: de hora em hora este agendamento chama /api/rotinas
+# (lembretes 1 dia e 2 h antes, e-mails pendentes, horários concluídos). Os pedidos dos clientes também rodam as rotinas.
+name: Rotinas do site
+
+on:
+  schedule:
+    - cron: '7 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  rotinas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Chama /api/rotinas
+        env:
+          SITE_URL: ${{ vars.SITE_URL || 'https://barbearia-do-fortao.vercel.app' }}
+        run: |
+          if curl -fsS --max-time 60 "$SITE_URL/api/rotinas"; then echo; else
+            echo "::notice::Não deu para chamar $SITE_URL/api/rotinas (site fora do ar ou SITE_URL errado em Settings > Variables > Actions)."
+          fi
