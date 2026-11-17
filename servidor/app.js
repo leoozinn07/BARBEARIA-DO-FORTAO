@@ -9,13 +9,28 @@ import { protegerCsrf } from './middlewares/csrf.js';
 import { apiNaoEncontrada, paginaNaoEncontrada, tratarErros } from './middlewares/erros.js';
 import { limites } from './middlewares/limites.js';
 import { carregarSessao } from './middlewares/sessao.js';
+import { prepararBanco } from './db/preparar.js';
+import { log } from './lib/log.js';
+import { ErroApp } from './lib/erros.js';
 import { rotasAdmin } from './rotas/admin.js';
 import { rotasAuth } from './rotas/auth.js';
 import { rotasConta } from './rotas/conta.js';
 import { rotasPublicas } from './rotas/publico.js';
 import { servirPaginas } from './paginas.js';
+import { rotinasNoCaminho } from './servicos/rotinas.js';
 
 const PUBLICO = path.join(RAIZ, 'publico');
+
+// Banco pronto antes de qualquer coisa que use dados (na Vercel, o primeiro pedido de cada instância cria/atualiza as tabelas)
+async function garantirBanco(_req, _res, next) {
+  try {
+    await prepararBanco();
+    next();
+  } catch (e) {
+    log.erro('banco_indisponivel', { erro: e.message });
+    next(new ErroApp(503, 'O sistema está fora do ar por um instante. Tente de novo em alguns minutos.', { codigo: 'banco' }));
+  }
+}
 
 export function criarApp() {
   const app = express();
@@ -29,6 +44,7 @@ export function criarApp() {
     if (papel && req.usuario.papel !== papel) return res.redirect(302, '/conta');
     next();
   }];
+  app.use(['/conta', '/conta.html', '/admin', '/admin.html', '/api'], garantirBanco);
   app.get(['/conta', '/conta.html'], ...exigirPagina());
   app.get(['/admin', '/admin.html'], ...exigirPagina('admin'));
 
@@ -47,7 +63,7 @@ export function criarApp() {
   }));
 
   const api = express.Router();
-  api.use(limites.api, express.json({ limit: '32kb' }), cookieParser(), carregarSessao, protegerCsrf);
+  api.use(limites.api, express.json({ limit: '32kb' }), cookieParser(), carregarSessao, protegerCsrf, rotinasNoCaminho);
   api.use(rotasPublicas);
   api.use('/auth', rotasAuth);
   api.use('/admin', rotasAdmin);

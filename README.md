@@ -128,7 +128,7 @@ docs/                    especificação, deploy, melhorias, prévias
 
 ## Próximos passos
 
-1. Colocar no ar: [docs/deploy.md](docs/deploy.md).
+1. Colocar no ar: na Vercel ou num servidor próprio, [docs/deploy.md](docs/deploy.md).
 2. Ligar o e-mail pela API do Brevo (grátis): [docs/deploy.md](docs/deploy.md), seção 4.
 3. Preencher endereço, WhatsApp, Instagram e dados da empresa no painel (aba Barbearia).
 4. Escolher melhorias: [docs/melhorias.md](docs/melhorias.md).

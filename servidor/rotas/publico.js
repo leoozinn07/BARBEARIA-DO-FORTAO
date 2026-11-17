@@ -3,12 +3,25 @@ import { Router } from 'express';
 import { config } from '../config.js';
 import { consulta } from '../db/index.js';
 import { garantirTokenCsrf } from '../middlewares/csrf.js';
+import { iguais } from '../lib/seguranca.js';
 import { campos, validar, z } from '../lib/validacao.js';
 import { barbeiroPadrao, diasDisponiveis, horariosDoDia, listarServicos } from '../servicos/agenda.js';
 import { lerConfiguracoes } from '../servicos/configuracoes.js';
+import { rodarRotinas } from '../servicos/rotinas.js';
 import { rota, usuarioPublico } from './comum.js';
 
 export const rotasPublicas = Router();
+
+// Rotinas (lembretes 24 h e 2 h, entrega de e-mails, horários concluídos), para quem não tem processo contínuo (Vercel).
+// Com o CRON_SECRET (o agendamento da Vercel manda sozinho) também faz a limpeza; sem ele, roda no máximo a cada 2 min.
+let ultimaRotina = 0;
+rotasPublicas.get('/rotinas', rota(async (req, res) => {
+  const autorizado = Boolean(config.segredoRotinas) && iguais(req.get('authorization'), `Bearer ${config.segredoRotinas}`);
+  if (!autorizado && Date.now() - ultimaRotina < 120000) return res.status(429).json({ ok: false, codigo: 'cedo_demais' });
+  ultimaRotina = Date.now();
+  const feito = await rodarRotinas({ limpeza: autorizado });
+  res.set('Cache-Control', 'no-store').json({ ok: true, ...feito });
+}));
 
 rotasPublicas.get('/saude', rota(async (_req, res) => {
   await consulta('SELECT 1');

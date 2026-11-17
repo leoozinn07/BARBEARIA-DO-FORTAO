@@ -2,15 +2,11 @@
 import { criarApp } from './app.js';
 import { config } from './config.js';
 import { fecharPool } from './db/index.js';
-import { migrar } from './db/migrar.js';
-import { semear } from './db/semear.js';
+import { prepararBanco } from './db/preparar.js';
 import { log } from './lib/log.js';
 import { iniciarRotinas, pararRotinas } from './servicos/rotinas.js';
 
-if (config.autoMigrar) {
-  await migrar();
-  await semear();
-}
+await prepararBanco();
 
 const servidor = criarApp().listen(config.porta, () => {
   log.info('servidor_no_ar', { porta: config.porta, url: config.appUrl, producao: config.producao });

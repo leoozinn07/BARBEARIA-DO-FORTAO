@@ -10,7 +10,11 @@ export function obterPool() {
       ...config.mysql,
       timezone: 'Z',
       charset: 'utf8mb4_0900_ai_ci',
-      connectionLimit: 10,
+      // Na Vercel cada instância é pequena e há muitas: poucas conexões por instância
+      connectionLimit: config.vercel ? 2 : 10,
+      maxIdle: config.vercel ? 1 : 10,
+      idleTimeout: 60000,
+      enableKeepAlive: true,
       waitForConnections: true,
       decimalNumbers: true,
     });
